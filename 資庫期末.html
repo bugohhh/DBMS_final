@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧販賣機管理平台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface2: #22263a;
+            --border: #2e3250;
+            --accent: #4f7cff;
+            --accent2: #7c5cff;
+            --success: #22c55e;
+            --warn: #f59e0b;
+            --danger: #ef4444;
+            --text: #e8eaf6;
+            --muted: #6b7280;
+            --mono: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
+
+        /* ── LOGIN ── */
+        #login-screen {
+            position: fixed; inset: 0; z-index: 200;
+            background: var(--bg);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .login-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 48px 40px;
+            width: 420px;
+            animation: slideUp .4s ease;
+        }
+        @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
+        .login-logo {
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; margin-bottom: 24px;
+        }
+        .login-card h1 { font-size: 24px; font-weight: 900; margin-bottom: 6px; }
+        .login-card p { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+        .role-tabs { display: flex; gap: 8px; margin-bottom: 28px; }
+        .role-tab {
+            flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+            background: transparent; color: var(--muted); cursor: pointer;
+            font-family: inherit; font-size: 13px; font-weight: 500;
+            transition: all .2s;
+        }
+        .role-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+        .form-group input {
+            width: 100%; padding: 12px 16px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--text);
+            font-family: inherit; font-size: 14px;
+            transition: border-color .2s;
+        }
+        .form-group input:focus { outline: none; border-color: var(--accent); }
+        .btn-login {
+            width: 100%; padding: 14px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border: none; border-radius: 12px;
+            color: #fff; font-weight: 700; font-size: 15px;
+            cursor: pointer; transition: opacity .2s;
+            margin-top: 8px;
+        }
+        .btn-login:hover { opacity: .9; }
+        .divider { text-align: center; color: var(--muted); font-size: 12px; margin: 20px 0; }
+        .btn-consumer {
+            width: 100%; padding: 12px;
+            background: transparent; border: 1px solid var(--border);
+            border-radius: 12px; color: var(--muted);
+            cursor: pointer; font-family: inherit; font-size: 14px;
+            transition: all .2s;
+        }
+        .btn-consumer:hover { border-color: var(--text); color: var(--text); }
+        .error-msg { color: var(--danger); font-size: 13px; margin-top: 10px; display: none; }
+
+        /* ── LAYOUT ── */
+        #admin-view { display: none; min-height: 100vh; }
+        aside {
+            position: fixed; top: 0; left: 0; bottom: 0; width: 240px;
+            background: var(--surface); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; z-index: 10;
+        }
+        .sidebar-header { padding: 28px 24px 20px; border-bottom: 1px solid var(--border); }
+        .sidebar-header h2 { font-size: 15px; font-weight: 900; color: var(--accent); }
+        .sidebar-header .badge {
+            display: inline-block; margin-top: 6px;
+            font-size: 10px; font-weight: 700; letter-spacing: .1em;
+            text-transform: uppercase; color: var(--muted);
+        }
+        nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px; border-radius: 10px;
+            color: var(--muted); background: transparent; border: none;
+            font-family: inherit; font-size: 14px; cursor: pointer;
+            transition: all .15s; text-align: left; width: 100%;
+        }
+        .nav-item:hover { background: var(--surface2); color: var(--text); }
+        .nav-item.active { background: rgba(79,124,255,.15); color: var(--accent); }
+        .nav-item i { width: 18px; text-align: center; }
+        .sidebar-footer { padding: 16px 12px; border-top: 1px solid var(--border); }
+        .btn-logout {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 12px; border-radius: 10px;
+            color: var(--danger); background: transparent; border: none;
+            font-family: inherit; font-size: 14px; cursor: pointer;
+            transition: background .15s; width: 100%;
+        }
+        .btn-logout:hover { background: rgba(239,68,68,.1); }
+
+        main { margin-left: 240px; padding: 40px; min-height: 100vh; }
+        .page-header { margin-bottom: 32px; }
+        .page-header h2 { font-size: 28px; font-weight: 900; }
+        .page-header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+        /* ── CARDS ── */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 24px;
+        }
+        .stat-card { }
+        .stat-card .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
+        .stat-card .value { font-size: 40px; font-weight: 900; font-family: var(--mono); line-height: 1; }
+        .stat-card .sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+        .accent-blue { color: var(--accent); }
+        .accent-red { color: var(--danger); }
+        .accent-yellow { color: var(--warn); }
+        .accent-green { color: var(--success); }
+
+        /* ── TABLE ── */
+        table { width: 100%; border-collapse: collapse; }
+        th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 0 16px 12px; text-align: left; }
+        td { padding: 14px 16px; font-size: 14px; border-top: 1px solid var(--border); }
+        tr:hover td { background: var(--surface2); }
+        .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .badge-ok { background: rgba(34,197,94,.12); color: var(--success); }
+        .badge-warn { background: rgba(245,158,11,.12); color: var(--warn); }
+        .badge-err { background: rgba(239,68,68,.12); color: var(--danger); }
+
+        /* ── BUTTONS ── */
+        .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 700; transition: all .15s; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: #3a6bff; }
+        .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+        .btn-ghost:hover { border-color: var(--accent); }
+
+        /* ── MODAL ── */
+        .modal-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,.6);
+            z-index: 100; display: none; align-items: center; justify-content: center;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 20px; padding: 32px; width: 480px;
+            animation: slideUp .25s ease;
+        }
+        .modal h3 { font-size: 18px; font-weight: 900; margin-bottom: 20px; }
+        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+        /* ── CHART BAR ── */
+        .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .bar-label { width: 100px; font-size: 13px; color: var(--muted); flex-shrink: 0; }
+        .bar-track { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .8s ease; }
+        .bar-val { width: 60px; font-size: 13px; font-weight: 700; font-family: var(--mono); text-align: right; }
+
+        /* ── CONSUMER ── */
+        #consumer-view {
+            display: none; min-height: 100vh;
+            background: linear-gradient(135deg, #1a1d27 0%, #0f1117 100%);
+            align-items: center; justify-content: center;
+        }
+        .phone-frame {
+            width: 360px; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 40px;
+            overflow: hidden; box-shadow: 0 40px 80px rgba(0,0,0,.5);
+        }
+        .phone-top {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            padding: 28px 24px 32px; color: #fff;
+        }
+        .phone-top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .phone-top h3 { font-size: 20px; font-weight: 900; }
+        .phone-top p { font-size: 12px; opacity: .7; margin-top: 4px; }
+        .phone-body { padding: 24px; }
+        .stock-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px; background: var(--surface2); border-radius: 14px;
+            margin-bottom: 10px; border: 1px solid var(--border);
+        }
+        .stock-item .name { font-weight: 700; font-size: 14px; }
+        .stock-item .price { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+        /* toast */
+        #toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: var(--surface2); border: 1px solid var(--border);
+            padding: 12px 24px; border-radius: 40px;
+            font-size: 14px; font-weight: 500;
+            opacity: 0; transition: opacity .3s; pointer-events: none;
+            z-index: 999;
+        }
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="login-screen">
+    <div class="login-card">
+        <div class="login-logo">🤖</div>
+        <h1>Smart Vending</h1>
+        <p>智慧販賣機管理平台</p>
+
+        <div class="role-tabs">
+            <button class="role-tab active" onclick="selectRole('admin', this)">系統管理員</button>
+            <button class="role-tab" onclick="selectRole('staff', this)">補貨人員</button>
+        </div>
+
+        <div id="login-form">
+            <div class="form-group">
+                <label>帳號</label>
+                <input type="text" id="inp-id" placeholder="輸入員工編號" />
+            </div>
+            <div class="form-group">
+                <label>密碼</label>
+                <input type="password" id="inp-pw" placeholder="輸入密碼" onkeydown="if(event.key==='Enter')doLogin()" />
+            </div>
+            <p class="error-msg" id="login-err">帳號或密碼錯誤，請重試</p>
+            <button class="btn-login" onclick="doLogin()">登入系統</button>
+        </div>
+
+        <div class="divider">── 或 ──</div>
+        <button class="btn-consumer" onclick="loginConsumer()">
+            <i class="fas fa-user mr-1"></i> 消費者模式（免登入）
+        </button>
+    </div>
+</div>
+
+<!-- ═══════════════ ADMIN ═══════════════ -->
+<div id="admin-view">
+    <aside>
+        <div class="sidebar-header">
+            <h2>⚡ Smart Vending</h2>
+            <span class="badge" id="role-badge"></span>
+        </div>
+        <nav>
+            <button class="nav-item active" id="nav-dashboard" onclick="switchTab('dashboard')">
+                <i class="fas fa-home"></i> 營運概覽
+            </button>
+            <button class="nav-item" id="nav-machines" onclick="switchTab('machines')">
+                <i class="fas fa-box-open"></i> 機台管理
+            </button>
+            <button class="nav-item" id="nav-tasks" onclick="switchTab('tasks')">
+                <i class="fas fa-truck-loading"></i> 補貨任務
+            </button>
+            <button class="nav-item" id="nav-sales" onclick="switchTab('sales')">
+                <i class="fas fa-chart-pie"></i> 銷售分析
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="btn-logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> 登出
+            </button>
+        </div>
+    </aside>
+
+    <main id="main-content"></main>
+</div>
+
+<!-- ═══════════════ CONSUMER ═══════════════ -->
+<div id="consumer-view" style="display:none; min-height:100vh; background:linear-gradient(135deg,#1a1d27,#0f1117); align-items:center; justify-content:center;">
+    <div class="phone-frame">
+        <div class="phone-top">
+            <div class="phone-top-nav">
+                <button onclick="logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;">
+                    ← 返回
+                </button>
+                <span style="font-size:11px;opacity:.6;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">附近販賣機</span>
+                <div style="width:60px"></div>
+            </div>
+            <h3>NCCU 商學院 1F</h3>
+            <p>機台編號: VM-001 ｜ 距離 120m</p>
+        </div>
+        <div class="phone-body">
+            <p style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;">目前庫存狀態</p>
+            <div class="stock-item">
+                <div><div class="name">可口可樂 330ml</div><div class="price">NT$ 30</div></div>
+                <span class="badge badge-ok">✓ 充足</span>
+            </div>
+            <div class="stock-item">
+                <div><div class="name">原萃綠茶 500ml</div><div class="price">NT$ 25</div></div>
+                <span class="badge badge-warn">⚠ 剩餘 2 瓶</span>
+            </div>
+            <div class="stock-item" style="opacity:.5">
+                <div><div class="name">美粒果柳橙</div><div class="price">NT$ 35</div></div>
+                <span class="badge badge-err">✕ 售罄</span>
+            </div>
+            <p style="font-size:11px;color:var(--muted);margin-top:20px;text-align:center;">點擊機台位置可切換其他區域</p>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ MODAL: 補貨完成 ═══════════════ -->
+<div class="modal-backdrop" id="modal-restock">
+    <div class="modal">
+        <h3>✅ 更新補貨進度</h3>
+        <div class="form-group">
+            <label>任務編號</label>
+            <input type="text" id="modal-task-id" readonly style="background:var(--bg);color:var(--muted);" />
+        </div>
+        <div class="form-group">
+            <label>實際補貨數量（可樂）</label>
+            <input type="number" id="modal-qty-cola" value="20" />
+        </div>
+        <div class="form-group">
+            <label>實際補貨數量（紅茶）</label>
+            <input type="number" id="modal-qty-tea" value="15" />
+        </div>
+        <div class="form-group">
+            <label>備註</label>
+            <input type="text" id="modal-note" placeholder="選填，例如：機台外觀破損" />
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-restock')">取消</button>
+            <button class="btn btn-primary" onclick="submitRestock()">確認送出</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ MODAL: 新增機台 ═══════════════ -->
+<div class="modal-backdrop" id="modal-add-machine">
+    <div class="modal">
+        <h3>➕ 新增販賣機台</h3>
+        <div class="form-group">
+            <label>機台名稱</label>
+            <input type="text" id="new-vm-name" placeholder="例：NCCU 法學院 B1" />
+        </div>
+        <div class="form-group">
+            <label>地區</label>
+            <input type="text" id="new-vm-area" placeholder="例：文山區" />
+        </div>
+        <div class="form-group">
+            <label>位置描述</label>
+            <input type="text" id="new-vm-location" placeholder="例：法學院一樓走廊" />
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-add-machine')">取消</button>
+            <button class="btn btn-primary" onclick="submitAddMachine()">新增</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ TOAST ═══════════════ -->
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   設定：後端串接時只需改這裡的 BASE_URL
+   開發中（後端還沒好）→ USE_MOCK = true
+   後端跑起來後        → USE_MOCK = false
+══════════════════════════════════════════════════════ */
+const BASE_URL = 'http://localhost:8080/api';
+const USE_MOCK = true; // ← 後端好了改成 false
+
+/* ══════════════════════════════════════════════════════
+   TOKEN 管理
+   對應 API 規格 §1.3、§15
+══════════════════════════════════════════════════════ */
+let accessToken = null;
+let refreshToken = null;
+let currentUser = null; // { user_id, user_name, user_type }
+
+// 所有需要登入的 API 都透過這個函式送出，自動帶 Authorization header
+async function apiFetch(method, path, body = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+    const res = await fetch(BASE_URL + path, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : null,
+    });
+
+    // access_token 過期（401）→ 自動嘗試用 refresh_token 換新的
+    if (res.status === 401 && refreshToken) {
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+            // 用新 token 重打一次
+            headers['Authorization'] = `Bearer ${accessToken}`;
+            return fetch(BASE_URL + path, { method, headers, body: body ? JSON.stringify(body) : null });
+        } else {
+            // refresh 也失敗 → 登出
+            logout();
+            return;
+        }
+    }
+    return res;
+}
+
+// POST /auth/refresh — 對應 API 規格 §2.2
+async function tryRefreshToken() {
+    try {
+        const res = await fetch(BASE_URL + '/auth/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            accessToken = data.data.access_token;
+            return true;
+        }
+    } catch (e) {}
+    return false;
+}
+
+/* ══════════════════════════════════════════════════════
+   MOCK DATA（後端還沒好時使用）
+   欄位名稱完全對齊 API 規格的 Response 格式
+══════════════════════════════════════════════════════ */
+const MOCK = {
+    // GET /machines response → data[]
+    machines: [
+        { machine_id: 1, machine_name: "商學院 1F",   region_name: "文山區", status: "Normal",   inventory: [{drink_name:"可口可樂",quantity:18},{drink_name:"原萃綠茶",quantity:2},{drink_name:"美粒果",quantity:0}] },
+        { machine_id: 2, machine_name: "圖書館 B1",   region_name: "文山區", status: "Low",      inventory: [{drink_name:"可口可樂",quantity:5},{drink_name:"原萃綠茶",quantity:12},{drink_name:"美粒果",quantity:8}] },
+        { machine_id: 3, machine_name: "行政大樓 1F", region_name: "文山區", status: "Critical", inventory: [{drink_name:"可口可樂",quantity:1},{drink_name:"原萃綠茶",quantity:0},{drink_name:"美粒果",quantity:0}] },
+        { machine_id: 4, machine_name: "學生活動中心",region_name: "大安區", status: "Normal",   inventory: [{drink_name:"可口可樂",quantity:20},{drink_name:"原萃綠茶",quantity:19},{drink_name:"美粒果",quantity:15}] },
+    ],
+    // GET /refill-tasks response → data[]
+    tasks: [
+        { refilltask_id: 101, region_name: "文山區", team_name: "A Team", task_date: "2026-05-09", task_type: "Regular Refill", status: "Pending",     details: [{drink_name:"可口可樂",planned_quantity:20},{drink_name:"原萃綠茶",planned_quantity:15}] },
+        { refilltask_id: 102, region_name: "大安區", team_name: "B Team", task_date: "2026-05-08", task_type: "Regular Refill", status: "Completed",   details: [{drink_name:"可口可樂",planned_quantity:5},{drink_name:"原萃綠茶",planned_quantity:5}] },
+    ],
+    // GET /analytics/top-drinks response → data[]
+    topDrinks: [
+        { drink_name: "原萃綠茶", total_quantity: 842, total_revenue: 21050 },
+        { drink_name: "可口可樂", total_quantity: 621, total_revenue: 18630 },
+        { drink_name: "美粒果",   total_quantity: 390, total_revenue: 13650 },
+        { drink_name: "雀巢咖啡", total_quantity: 275, total_revenue: 9625  },
+    ],
+    // GET /analytics/sales-summary response → data[]
+    salesSummary: [
+        { label: "05/03", total_quantity: 120, total_revenue: 4200 },
+        { label: "05/04", total_quantity: 150, total_revenue: 5250 },
+        { label: "05/05", total_quantity: 98,  total_revenue: 3430 },
+        { label: "05/06", total_quantity: 173, total_revenue: 6055 },
+        { label: "05/07", total_quantity: 142, total_revenue: 4970 },
+        { label: "05/08", total_quantity: 188, total_revenue: 6580 },
+        { label: "05/09", total_quantity: 206, total_revenue: 7210 },
+    ],
+};
+
+/* ══════════════════════════════════════════════════════
+   AUTH
+   對應 API 規格 §2（Authentication API）
+══════════════════════════════════════════════════════ */
+let selectedLoginRole = 'admin';
+
+function selectRole(role, el) {
+    selectedLoginRole = role;
+    document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+}
+
+// POST /auth/login — 對應 API 規格 §2.1
+async function doLogin() {
+    const account = document.getElementById('inp-id').value.trim();
+    const password = document.getElementById('inp-pw').value.trim();
+    const err = document.getElementById('login-err');
+    err.style.display = 'none';
+
+    if (!account || !password) { err.textContent = '請填寫帳號與密碼'; err.style.display = 'block'; return; }
+
+    if (USE_MOCK) {
+        // ── Mock 模式：模擬後端回傳 ──
+        const mockUsers = {
+            manager01: { password: 'admin123', user_id: 1, user_name: '王小明', user_type: 'Manager' },
+            staff01:   { password: 'staff123', user_id: 2, user_name: '陳大文', user_type: 'Staff'   },
+        };
+        const found = mockUsers[account];
+        if (!found || found.password !== password) {
+            err.textContent = '帳號或密碼錯誤，請重試'; err.style.display = 'block'; return;
+        }
+        accessToken  = 'mock_access_token';
+        refreshToken = 'mock_refresh_token';
+        currentUser  = { user_id: found.user_id, user_name: found.user_name, user_type: found.user_type };
+        enterSystem();
+        return;
+    }
+
+    // ── 真實 API 模式 ──
+    // Request Body: { account, password }
+    // Response: { success, data: { user_id, user_name, user_type, access_token, refresh_token } }
+    try {
+        const res = await fetch(BASE_URL + '/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account, password }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+            err.textContent = data.message || '帳號或密碼錯誤'; err.style.display = 'block'; return;
+        }
+        accessToken  = data.data.access_token;
+        refreshToken = data.data.refresh_token;
+        currentUser  = { user_id: data.data.user_id, user_name: data.data.user_name, user_type: data.data.user_type };
+        enterSystem();
+    } catch (e) {
+        err.textContent = '無法連線至伺服器，請確認後端是否啟動'; err.style.display = 'block';
+    }
+}
+
+function loginConsumer() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('consumer-view').style.display = 'flex';
+}
+
+function enterSystem() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-view').style.display = 'block';
+    document.getElementById('role-badge').textContent = currentUser.user_name + ' · ' + currentUser.user_type;
+
+    // Staff 看不到銷售分析（前端畫面控制，後端仍會擋權限）
+    document.getElementById('nav-sales').style.display =
+        currentUser.user_type === 'Manager' ? 'flex' : 'none';
+
+    switchTab('dashboard');
+}
+
+// POST /auth/logout — 對應 API 規格 §2.3
+async function logout() {
+    if (!USE_MOCK && accessToken) {
+        try {
+            await apiFetch('POST', '/auth/logout', { refresh_token: refreshToken });
+        } catch (e) {}
+    }
+    accessToken = refreshToken = currentUser = null;
+    location.reload();
+}
+
+/* ══════════════════════════════════════════════════════
+   TABS
+══════════════════════════════════════════════════════ */
+function switchTab(tab) {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    const el = document.getElementById('nav-' + tab);
+    if (el) el.classList.add('active');
+    const area = document.getElementById('main-content');
+
+    if (tab === 'dashboard') renderDashboard(area);
+    else if (tab === 'machines') renderMachines(area);
+    else if (tab === 'tasks') renderTasks(area);
+    else if (tab === 'sales') renderSales(area);
+}
+
+/* ══════════════════════════════════════════════════════
+   DASHBOARD
+   使用：GET /machines + GET /refill-tasks
+   對應 API 規格 §5.1、§10.1
+══════════════════════════════════════════════════════ */
+async function renderDashboard(area) {
+    area.innerHTML = loadingHTML('載入概覽中...');
+
+    let machines, tasks;
+    if (USE_MOCK) {
+        machines = MOCK.machines;
+        tasks    = MOCK.tasks;
+    } else {
+        // GET /machines → { success, data: [ {machine_id, machine_name, region_name, status, ...} ] }
+        const [mRes, tRes] = await Promise.all([
+            apiFetch('GET', '/machines'),
+            apiFetch('GET', '/refill-tasks'),
+        ]);
+        machines = (await mRes.json()).data;
+        tasks    = (await tRes.json()).data;
+    }
+
+    const pending  = tasks.filter(t => t.status === 'Pending').length;
+    const critical = machines.filter(m => m.status === 'Critical').length;
+    const low      = machines.filter(m => m.status === 'Low').length;
+
+    area.innerHTML = `
+        <div class="page-header">
+            <h2>營運概覽</h2>
+            <p>即時監控所有販賣機狀態｜登入身份：${currentUser.user_name}</p>
+        </div>
+        <div class="grid-3" style="margin-bottom:20px">
+            <div class="card stat-card">
+                <div class="label">待補貨任務</div>
+                <div class="value accent-blue">${pending}</div>
+                <div class="sub">單待處理</div>
+            </div>
+            <div class="card stat-card">
+                <div class="label">嚴重缺貨機台</div>
+                <div class="value accent-red">${critical}</div>
+                <div class="sub">台需立即補貨</div>
+            </div>
+            <div class="card stat-card">
+                <div class="label">庫存偏低機台</div>
+                <div class="value accent-yellow">${low}</div>
+                <div class="sub">台需關注</div>
+            </div>
+        </div>
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                <div style="font-weight:700">機台狀態總覽</div>
+                <button class="btn btn-ghost" onclick="switchTab('machines')">查看全部 →</button>
+            </div>
+            <table>
+                <thead><tr>
+                    <th>機台</th><th>地區</th><th>庫存明細</th><th>狀態</th>
+                </tr></thead>
+                <tbody>
+                ${machines.map(m => `
+                    <tr>
+                        <td style="font-weight:700">${m.machine_name}<br>
+                            <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">#${m.machine_id}</span>
+                        </td>
+                        <td style="color:var(--muted)">${m.region_name}</td>
+                        <td style="font-size:12px;color:var(--muted)">
+                            ${(m.inventory||[]).map(i => `${i.drink_name}: ${i.quantity}`).join(' ／ ')}
+                        </td>
+                        <td>${statusBadge(m.status)}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   MACHINES
+   使用：GET /machines、POST /machines
+   對應 API 規格 §5.1、§5.2
+══════════════════════════════════════════════════════ */
+async function renderMachines(area) {
+    area.innerHTML = loadingHTML('載入機台資料...');
+    const isManager = currentUser.user_type === 'Manager';
+
+    let machines;
+    if (USE_MOCK) {
+        machines = MOCK.machines;
+    } else {
+        // GET /machines
+        const res = await apiFetch('GET', '/machines');
+        machines = (await res.json()).data;
+    }
+
+    area.innerHTML = `
+        <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div><h2>機台管理</h2><p>管理所有販賣機台資訊</p></div>
+            ${isManager ? `<button class="btn btn-primary" onclick="openModal('modal-add-machine')">+ 新增機台</button>` : ''}
+        </div>
+        <div class="card">
+            <table>
+                <thead><tr>
+                    <th>機台 ID</th><th>名稱</th><th>地區</th><th>庫存明細</th><th>狀態</th>
+                    ${isManager ? '<th>操作</th>' : ''}
+                </tr></thead>
+                <tbody>
+                ${machines.map(m => `
+                    <tr>
+                        <td style="font-family:var(--mono);color:var(--muted)">#${m.machine_id}</td>
+                        <td style="font-weight:700">${m.machine_name}</td>
+                        <td style="color:var(--muted)">${m.region_name}</td>
+                        <td style="font-size:12px;color:var(--muted)">
+                            ${(m.inventory||[]).map(i => `${i.drink_name}: ${i.quantity}`).join(' ／ ')}
+                        </td>
+                        <td>${statusBadge(m.status)}</td>
+                        ${isManager ? `<td>
+                            <button class="btn btn-ghost" onclick="showToast('已標記 #${m.machine_id} 需維修')">標記維修</button>
+                        </td>` : ''}
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   TASKS
+   使用：
+     Manager → GET /refill-tasks               (§10.1)
+     Staff   → GET /staff/{staff_id}/refill-tasks (§10.5)
+   完成補貨 → PUT /refill-tasks/{id}/complete  (§10.7)
+══════════════════════════════════════════════════════ */
+async function renderTasks(area) {
+    area.innerHTML = loadingHTML('載入補貨任務...');
+    const isManager = currentUser.user_type === 'Manager';
+
+    let tasks;
+    if (USE_MOCK) {
+        tasks = MOCK.tasks;
+    } else {
+        // Manager 看全部；Staff 只看自己的
+        const path = isManager
+            ? '/refill-tasks'
+            : `/staff/${currentUser.user_id}/refill-tasks`;
+        const res = await apiFetch('GET', path);
+        tasks = (await res.json()).data;
+    }
+
+    area.innerHTML = `
+        <div class="page-header">
+            <h2>補貨任務管理</h2>
+            <p>依地理位置自動分組排程</p>
+        </div>
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                <div style="font-weight:700">目前補貨排程</div>
+            </div>
+            <table>
+                <thead><tr>
+                    <th>任務編號</th><th>地區</th><th>班組</th><th>任務日期</th><th>類型</th><th>攜帶品項</th><th>狀態</th><th>操作</th>
+                </tr></thead>
+                <tbody>
+                ${tasks.map(t => `
+                    <tr>
+                        <td style="font-family:var(--mono);color:var(--muted)">#${t.refilltask_id}</td>
+                        <td>${t.region_name}</td>
+                        <td style="color:var(--muted)">${t.team_name}</td>
+                        <td style="font-family:var(--mono);font-size:12px">${t.task_date}</td>
+                        <td style="font-size:12px">${t.task_type}</td>
+                        <td style="font-size:12px;color:var(--muted)">
+                            ${(t.details||[]).map(d => `${d.drink_name} x${d.planned_quantity}`).join('、')}
+                        </td>
+                        <td>${taskStatusBadge(t.status)}</td>
+                        <td>${t.status === 'Pending'
+                            ? `<button class="btn btn-primary" onclick="openRestockModal(${t.refilltask_id})">更新進度</button>`
+                            : '<span style="color:var(--muted);font-size:13px">—</span>'}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   SALES（Manager only）
+   使用：GET /analytics/top-drinks     (§12.2)
+         GET /analytics/sales-summary  (§12.1)
+══════════════════════════════════════════════════════ */
+async function renderSales(area) {
+    area.innerHTML = loadingHTML('載入銷售分析...');
+
+    let topDrinks, salesSummary;
+    const today = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
+
+    if (USE_MOCK) {
+        topDrinks    = MOCK.topDrinks;
+        salesSummary = MOCK.salesSummary;
+    } else {
+        // GET /analytics/top-drinks?start_date=...&end_date=...&limit=5
+        // GET /analytics/sales-summary?start_date=...&end_date=...&group_by=day
+        const [tRes, sRes] = await Promise.all([
+            apiFetch('GET', `/analytics/top-drinks?start_date=${weekAgo}&end_date=${today}&limit=5`),
+            apiFetch('GET', `/analytics/sales-summary?start_date=${weekAgo}&end_date=${today}&group_by=day`),
+        ]);
+        topDrinks    = (await tRes.json()).data;
+        salesSummary = (await sRes.json()).data;
+    }
+
+    const maxQty = Math.max(...topDrinks.map(d => d.total_quantity));
+    const totalQty = topDrinks.reduce((a, b) => a + b.total_quantity, 0);
+    const totalRev = topDrinks.reduce((a, b) => a + b.total_revenue, 0);
+
+    area.innerHTML = `
+        <div class="page-header">
+            <h2>銷售分析</h2>
+            <p>近 7 日銷售數據</p>
+        </div>
+        <div class="grid-2">
+            <div class="card">
+                <div style="font-weight:700;margin-bottom:24px">熱門商品 Top ${topDrinks.length}</div>
+                ${topDrinks.map((d, i) => `
+                    <div class="bar-row">
+                        <div class="bar-label">${i+1}. ${d.drink_name}</div>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width:0%" data-pct="${Math.round(d.total_quantity/maxQty*100)}"></div>
+                        </div>
+                        <div class="bar-val">${d.total_quantity.toLocaleString()}</div>
+                    </div>`).join('')}
+            </div>
+            <div class="card">
+                <div style="font-weight:700;margin-bottom:20px">週期概況</div>
+                <div class="card stat-card" style="background:var(--surface2);margin-bottom:12px">
+                    <div class="label">總銷售瓶數</div>
+                    <div class="value accent-blue">${totalQty.toLocaleString()}</div>
+                </div>
+                <div class="card stat-card" style="background:var(--surface2);margin-bottom:12px">
+                    <div class="label">總營收</div>
+                    <div class="value accent-green" style="font-size:28px">NT$ ${totalRev.toLocaleString()}</div>
+                </div>
+                <div class="card stat-card" style="background:var(--surface2)">
+                    <div class="label">最暢銷商品</div>
+                    <div class="value" style="font-size:20px;font-weight:900">${topDrinks[0]?.drink_name || '—'}</div>
+                </div>
+                <div style="margin-top:20px">
+                    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">每日銷量趨勢</div>
+                    <div style="display:flex;align-items:flex-end;gap:4px;height:60px">
+                    ${salesSummary.map(s => {
+                        const maxS = Math.max(...salesSummary.map(x => x.total_quantity));
+                        const h = Math.round(s.total_quantity / maxS * 100);
+                        return `<div style="flex:1;background:var(--accent);opacity:.7;height:${h}%;border-radius:3px 3px 0 0;position:relative" title="${s.label}: ${s.total_quantity}"></div>`;
+                    }).join('')}
+                    </div>
+                    <div style="display:flex;gap:4px;margin-top:4px">
+                    ${salesSummary.map(s => `<div style="flex:1;font-size:9px;color:var(--muted);text-align:center">${s.label}</div>`).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+    setTimeout(() => {
+        document.querySelectorAll('.bar-fill').forEach(el => {
+            el.style.width = el.dataset.pct + '%';
+        });
+    }, 50);
+}
+
+/* ══════════════════════════════════════════════════════
+   ACTIONS
+══════════════════════════════════════════════════════ */
+
+// Modal：補貨完成
+// PUT /refill-tasks/{refilltask_id}/complete — 對應 API 規格 §10.7
+let currentRestockTaskId = null;
+
+function openRestockModal(taskId) {
+    currentRestockTaskId = taskId;
+    document.getElementById('modal-task-id').value = '#' + taskId;
+    openModal('modal-restock');
+}
+
+async function submitRestock() {
+    const actualQty = parseInt(document.getElementById('modal-qty-cola').value);
+    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+    if (USE_MOCK) {
+        const task = MOCK.tasks.find(t => t.refilltask_id === currentRestockTaskId);
+        if (task) task.status = 'Completed';
+    } else {
+        // PUT /refill-tasks/{refilltask_id}/complete
+        // Body: { completed_time }
+        await apiFetch('PUT', `/refill-tasks/${currentRestockTaskId}/complete`, {
+            completed_time: now,
+        });
+    }
+
+    closeModal('modal-restock');
+    showToast('✅ 補貨任務已完成！');
+    switchTab('tasks');
+}
+
+// Modal：新增機台
+// POST /machines — 對應 API 規格 §5.2
+async function submitAddMachine() {
+    const machine_name = document.getElementById('new-vm-name').value.trim();
+    const location     = document.getElementById('new-vm-location').value.trim();
+    const region_name  = document.getElementById('new-vm-area').value.trim();
+    if (!machine_name || !region_name) { showToast('⚠ 請填寫必填欄位'); return; }
+
+    if (USE_MOCK) {
+        MOCK.machines.push({
+            machine_id: MOCK.machines.length + 1,
+            machine_name, region_name,
+            status: 'Normal', inventory: [],
+        });
+    } else {
+        // POST /machines
+        // Body: { machine_name, location, region_id } ← region_id 需從 GET /regions 取得
+        // 這裡先用 region_name 示意，實際串接時改為 region_id
+        await apiFetch('POST', '/machines', { machine_name, location });
+    }
+
+    closeModal('modal-add-machine');
+    showToast(`✅ 機台 ${machine_name} 已新增！`);
+    switchTab('machines');
+}
+
+/* ══════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════ */
+function loadingHTML(msg) {
+    return `<div style="padding:60px;text-align:center;color:var(--muted)">${msg}</div>`;
+}
+
+function statusBadge(s) {
+    // 對應後端回傳的 status 字串
+    const map = {
+        Normal:   ['badge-ok',   '✓ 正常'],
+        Low:      ['badge-warn', '⚠ 偏低'],
+        Critical: ['badge-err',  '✕ 缺貨'],
+    };
+    const [cls, label] = map[s] || ['badge-ok', s];
+    return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function taskStatusBadge(s) {
+    const map = {
+        Pending:     ['badge-warn', '⏳ 待處理'],
+        'In Progress':['badge-ok',  '🔄 進行中'],
+        Completed:   ['badge-ok',   '✓ 已完成'],
+    };
+    const [cls, label] = map[s] || ['badge-warn', s];
+    return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+let toastTimer;
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+document.querySelectorAll('.modal-backdrop').forEach(b => {
+    b.addEventListener('click', e => { if (e.target === b) b.classList.remove('open'); });
+});
+</script>
+</body>
+</html>
