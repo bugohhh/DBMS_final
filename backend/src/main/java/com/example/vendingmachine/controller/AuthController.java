@@ -20,13 +20,13 @@ public class AuthController {
         String password = loginRequest.get("password");
 
         // 啟動大腦進行驗證
-        String token = authService.authenticate(account, password);
+        Map<String, Object> authResult = authService.authenticate(account, password);
 
         Map<String, Object> response = new HashMap<>();
-        if (token != null) {
+        if (authResult != null && (Boolean) authResult.get("success")) {
             response.put("success", true);
             response.put("message", "Login successful");
-            response.put("token", token); // 把通行證發回給前端
+            response.put("data", authResult.get("data"));
         } else {
             response.put("success", false);
             response.put("message", "Invalid account or password");
