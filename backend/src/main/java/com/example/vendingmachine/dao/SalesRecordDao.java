@@ -38,7 +38,7 @@ public class SalesRecordDao {
 
 
     public SalesRecord create(SalesRecord record) {
-        String sql = "INSERT INTO sales_record (machine_id, drink_id, quantity, sale_time, record_source) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO SalesRecord (machine_id, drink_id, quantity, sale_time, record_source) VALUES (?, ?, ?, ?, ?)";
         
         Timestamp timestamp = record.getSaleTime() != null ? Timestamp.valueOf(record.getSaleTime()) : new Timestamp(System.currentTimeMillis());
         
@@ -54,7 +54,7 @@ public class SalesRecordDao {
     }
 
     public List<SalesRecord> findAll() {
-        String sql = "SELECT * FROM sales_record";
+        String sql = "SELECT * FROM SalesRecord ORDER BY sale_time DESC, sales_id DESC";
         return jdbcTemplate.query(sql, salesRecordMapper);
     }
 }

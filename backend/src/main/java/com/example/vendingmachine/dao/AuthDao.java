@@ -24,7 +24,15 @@ public class AuthDao {
         result.put("success", false);
         
         // 助教必看的 Raw SQL 語法
-        String checkSql = "SELECT user_id, user_name, user_type FROM account WHERE account = ? AND password_hash = ?";
+        // 修正原因：Account 表只有帳號密碼，user_name / user_type 在 User 表，
+        // 所以登入時要 JOIN User 才拿得到使用者名稱與角色。
+        // 另外表名照 schema 使用 `Account`、`User`，避免大小寫或保留字造成錯誤。
+        String checkSql = """
+                SELECT a.user_id, u.user_name, u.user_type
+                FROM `Account` a
+                JOIN `User` u ON a.user_id = u.user_id
+                WHERE a.account = ? AND a.password_hash = ?
+                """;
 
         try (Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
              PreparedStatement pstmt = conn.prepareStatement(checkSql)) {
@@ -42,8 +50,10 @@ public class AuthDao {
                 String accessToken = UUID.randomUUID().toString();
                 String refreshToken = UUID.randomUUID().toString();
                 
-                // 將這張通行證存入你剛在 TablePlus 建好的 loginsession 表中
-                String sessionSql = "INSERT INTO loginsession (user_id, refresh_token_hash, issued_at, expires_at) " +
+                // 將這張通行證存入 LoginSession 表中。
+                // 這裡存 refreshToken；SalesRecordController 讀取銷售紀錄時，
+                // 會用 Authorization: Bearer <refresh_token> 到 LoginSession 驗證管理員權限。
+                String sessionSql = "INSERT INTO `LoginSession` (user_id, refresh_token_hash, issued_at, expires_at) " +
                                     "VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 2 HOUR))";
                 
                 try (PreparedStatement sessionPstmt = conn.prepareStatement(sessionSql)) {
