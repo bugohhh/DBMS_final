@@ -23,10 +23,12 @@ public class InventoryDao {
             inv.setMachineId(rs.getLong("machine_id"));
             inv.setDrinkId(rs.getLong("drink_id"));
             inv.setQuantity(rs.getInt("quantity"));
+            inv.setPrice(rs.getInt("price"));
+            inv.setLowStockThreshold(rs.getInt("low_stock_threshold"));
+            inv.setCapacity(rs.getInt("capacity"));
             return inv;
         }
     };
-
 
     public List<Inventory> findByMachineId(Long machineId) {
         String sql = "SELECT * FROM inventory WHERE machine_id = ?";
@@ -34,20 +36,37 @@ public class InventoryDao {
     }
 
 
-    public void insert(Inventory inventory) {
-        String sql = "INSERT INTO inventory (machine_id, drink_id, quantity) VALUES (?, ?, ?)";
-        jdbcTemplate.update(sql, inventory.getMachineId(), inventory.getDrinkId(), inventory.getQuantity());
+    public Inventory create(Inventory inventory) {
+        String sql = "INSERT INTO inventory (machine_id, drink_id, quantity, price, low_stock_threshold, capacity) VALUES (?, ?, ?, ?, ?, ?)";
+        jdbcTemplate.update(sql, 
+            inventory.getMachineId(), 
+            inventory.getDrinkId(), 
+            inventory.getQuantity(),
+            inventory.getPrice(),
+            inventory.getLowStockThreshold(),
+            inventory.getCapacity()
+        );
+        return inventory;
     }
 
 
-    public void update(Inventory inventory) {
-        String sql = "UPDATE inventory SET quantity = ? WHERE inventory_id = ?";
-        jdbcTemplate.update(sql, inventory.getQuantity(), inventory.getInventoryId());
+    public Inventory update(Long inventoryId, Inventory inventory) {
+        String sql = "UPDATE inventory SET quantity = ?, price = ?, low_stock_threshold = ?, capacity = ? WHERE inventory_id = ?";
+        jdbcTemplate.update(sql, 
+            inventory.getQuantity(), 
+            inventory.getPrice(),
+            inventory.getLowStockThreshold(),
+            inventory.getCapacity(),
+            inventoryId
+        );
+        inventory.setInventoryId(inventoryId);
+        return inventory;
     }
 
 
-    public List<Inventory> findLowStock(int threshold) {
-        String sql = "SELECT * FROM inventory WHERE quantity <= ?";
-        return jdbcTemplate.query(sql, inventoryMapper, threshold);
+    public List<Inventory> findLowStock() {
+
+        String sql = "SELECT * FROM inventory WHERE quantity <= low_stock_threshold";
+        return jdbcTemplate.query(sql, inventoryMapper);
     }
 }

@@ -24,6 +24,7 @@ public class InventoryService {
     }
 
     public Inventory updateInventory(Long inventoryId, Inventory inventory) {
+
         return inventoryDao.update(inventoryId, inventory);
     }
 

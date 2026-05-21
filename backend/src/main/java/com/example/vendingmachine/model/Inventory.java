@@ -10,7 +10,6 @@ public class Inventory {
     private Integer lowStockThreshold;
     private Integer capacity;
 
-
     public Long getInventoryId() { return inventoryId; }
     public void setInventoryId(Long inventoryId) { this.inventoryId = inventoryId; }
     public Long getMachineId() { return machineId; }
