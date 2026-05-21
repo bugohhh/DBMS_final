@@ -1,39 +1,53 @@
 package com.example.vendingmachine.dao;
 
 import com.example.vendingmachine.model.Inventory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
-
-import java.util.Collections;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 
 @Repository
 public class InventoryDao {
 
-    private final JdbcTemplate jdbcTemplate;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
-    public InventoryDao(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
+    private final RowMapper<Inventory> inventoryMapper = new RowMapper<Inventory>() {
+        @Override
+        public Inventory mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Inventory inv = new Inventory();
+            inv.setInventoryId(rs.getLong("inventory_id"));
+            inv.setMachineId(rs.getLong("machine_id"));
+            inv.setDrinkId(rs.getLong("drink_id"));
+            inv.setQuantity(rs.getInt("quantity"));
+            return inv;
+        }
+    };
+
 
     public List<Inventory> findByMachineId(Long machineId) {
-        // TODO: Implement SELECT from Inventory by machine_id.
-        return Collections.emptyList();
+        String sql = "SELECT * FROM inventory WHERE machine_id = ?";
+        return jdbcTemplate.query(sql, inventoryMapper, machineId);
     }
 
-    public Inventory create(Inventory inventory) {
-        // TODO: Implement INSERT into Inventory.
-        return inventory;
+
+    public void insert(Inventory inventory) {
+        String sql = "INSERT INTO inventory (machine_id, drink_id, quantity) VALUES (?, ?, ?)";
+        jdbcTemplate.update(sql, inventory.getMachineId(), inventory.getDrinkId(), inventory.getQuantity());
     }
 
-    public Inventory update(Long inventoryId, Inventory inventory) {
-        // TODO: Implement UPDATE Inventory by inventory_id.
-        inventory.setInventoryId(inventoryId);
-        return inventory;
+
+    public void update(Inventory inventory) {
+        String sql = "UPDATE inventory SET quantity = ? WHERE inventory_id = ?";
+        jdbcTemplate.update(sql, inventory.getQuantity(), inventory.getInventoryId());
     }
 
-    public List<Inventory> findLowStock() {
-        // TODO: Implement SELECT where quantity <= threshold.
-        return Collections.emptyList();
+
+    public List<Inventory> findLowStock(int threshold) {
+        String sql = "SELECT * FROM inventory WHERE quantity <= ?";
+        return jdbcTemplate.query(sql, inventoryMapper, threshold);
     }
 }

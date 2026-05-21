@@ -9,6 +9,7 @@ public class Drink {
     private String size;
     private String status;
 
+
     public Long getDrinkId() { return drinkId; }
     public void setDrinkId(Long drinkId) { this.drinkId = drinkId; }
     public String getDrinkName() { return drinkName; }

@@ -1,0 +1,70 @@
+package com.example.vendingmachine.service;
+
+import com.example.vendingmachine.dao.RegionDao;
+import com.example.vendingmachine.dao.TeamDao;
+import com.example.vendingmachine.dao.StaffTeamDao;
+import com.example.vendingmachine.model.Region;
+import com.example.vendingmachine.model.Team;
+import com.example.vendingmachine.model.StaffTeam;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+
+@Service
+public class BaseDataService {
+
+    @Autowired 
+    private RegionDao regionDao;
+
+    @Autowired 
+    private TeamDao teamDao;
+
+    @Autowired 
+    private StaffTeamDao staffTeamDao;
+
+    // === Region 功能 ===
+    public List<Region> getAllRegions() { 
+        return regionDao.findAll(); 
+    }
+    
+    public Region createRegion(Region region) { 
+        return regionDao.save(region); 
+    }
+    
+    public Region updateRegion(Long id, Region updatedRegion) {
+        Region region = regionDao.findById(id).orElseThrow(() -> new RuntimeException("找不到該區域"));
+        region.setName(updatedRegion.getName());
+        region.setDescription(updatedRegion.getDescription());
+        return regionDao.save(region);
+    }
+    
+    public void deleteRegion(Long id) { 
+        regionDao.deleteById(id); 
+    }
+
+    // === Team 功能 ===
+    public List<Team> getAllTeams() { 
+        return teamDao.findAll(); 
+    }
+    
+    public Team createTeam(Team team) { 
+        return teamDao.save(team); 
+    }
+
+    public StaffTeam addStaffToTeam(Long teamId, Long staffId) {
+        StaffTeam staffTeam = new StaffTeam();
+        staffTeam.setTeamId(teamId);
+        staffTeam.setStaffId(staffId);
+        return staffTeamDao.save(staffTeam);
+    }
+
+    public List<StaffTeam> getStaffByTeam(Long teamId) {
+        return staffTeamDao.findByTeamId(teamId);
+    }
+
+    public void removeStaffFromTeam(Long teamId, Long staffId) {
+        StaffTeam staffTeam = staffTeamDao.findByTeamIdAndStaffId(teamId, staffId)
+                .orElseThrow(() -> new RuntimeException("在該團隊中找不到此員工"));
+        staffTeamDao.delete(staffTeam);
+    }
+}

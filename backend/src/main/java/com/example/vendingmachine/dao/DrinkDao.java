@@ -1,20 +1,64 @@
 package com.example.vendingmachine.dao;
 
 import com.example.vendingmachine.model.Drink;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class DrinkDao {
 
-    private final JdbcTemplate jdbcTemplate;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
-    public DrinkDao(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    private final RowMapper<Drink> drinkRowMapper = new RowMapper<Drink>() {
+        @Override
+        public Drink mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Drink drink = new Drink();
+            drink.setDrinkId(rs.getLong("drink_id"));
+            drink.setDrinkName(rs.getString("drink_name"));
+            drink.setBrand(rs.getString("brand"));
+            drink.setCategory(rs.getString("category"));
+            drink.setSize(rs.getString("size"));
+            drink.setStatus(rs.getString("status"));
+            return drink;
+        }
+    };
+
+
+    public List<Drink> findAll() {
+        String sql = "SELECT * FROM drinks";
+        return jdbcTemplate.query(sql, drinkRowMapper);
     }
 
-    public Drink findById(Long drinkId) {
-        // TODO: Implement SELECT from Drink by drink_id.
-        return null;
+
+    public Optional<Drink> findById(Long id) {
+        String sql = "SELECT * FROM drinks WHERE drink_id = ?";
+        List<Drink> list = jdbcTemplate.query(sql, drinkRowMapper, id);
+        return list.stream().findFirst();
+    }
+
+
+    public Drink save(Drink drink) {
+        if (drink.getDrinkId() == null) {
+            String sql = "INSERT INTO drinks (drink_name, brand, category, size, status) VALUES (?, ?, ?, ?, ?)";
+            jdbcTemplate.update(sql, drink.getDrinkName(), drink.getBrand(), drink.getCategory(), drink.getSize(), drink.getStatus());
+            return drink;
+        } else {
+            String sql = "UPDATE drinks SET drink_name = ?, brand = ?, category = ?, size = ?, status = ? WHERE drink_id = ?";
+            jdbcTemplate.update(sql, drink.getDrinkName(), drink.getBrand(), drink.getCategory(), drink.getSize(), drink.getStatus(), drink.getDrinkId());
+            return drink;
+        }
+    }
+
+
+    public void deleteById(Long id) {
+        String sql = "DELETE FROM drinks WHERE drink_id = ?";
+        jdbcTemplate.update(sql, id);
     }
 }
