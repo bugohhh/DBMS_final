@@ -43,6 +43,24 @@ public class AuthService {
      *
      * 注意：正式系統不建議直接存明文 token，應該存 hash 後再比對。
      */
+    public boolean isValidToken(String token) {
+        // COUNT(*) > 0 就代表這個 token 對應到有效 session。
+        String sql = """
+                SELECT COUNT(*)
+                FROM LoginSession ls
+                WHERE ls.refresh_token_hash = ?
+                  AND ls.revoked_at IS NULL
+                  AND (ls.expires_at IS NULL OR ls.expires_at > NOW())
+                """;
+
+        try {
+            Integer count = jdbcTemplate.queryForObject(sql, Integer.class, token);
+            return count != null && count > 0;
+        } catch (DataAccessException e) {
+            return false;
+        }
+    }
+
     public boolean isManagerToken(String token) {
         // COUNT(*) > 0 就代表這個 token 對應到有效的管理員 session。
         String sql = """

@@ -28,7 +28,11 @@ public class SalesRecordController {
     }
 
     @PostMapping
-    public ApiResponse<SalesRecord> createSalesRecord(@RequestBody SalesRecord salesRecord) {
+    public ApiResponse<SalesRecord> createSalesRecord(
+            @RequestBody SalesRecord salesRecord,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        requireValidToken(authorization);
         return ApiResponse.success("Sales record created", salesRecordService.createSalesRecord(salesRecord));
     }
 
@@ -42,6 +46,13 @@ public class SalesRecordController {
         }
 
         return ApiResponse.success("Sales record list", salesRecordService.getSalesRecords());
+    }
+
+    private void requireValidToken(String authorization) {
+        String token = extractBearerToken(authorization);
+        if (!authService.isValidToken(token)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid or expired token");
+        }
     }
 
     private String extractBearerToken(String authorization) {
