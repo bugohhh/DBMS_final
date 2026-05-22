@@ -7,19 +7,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth") // 前端呼叫的網址起頭
+@RequestMapping("/api/auth") 
 public class AuthController {
 
     @Autowired
     private AuthService authService;
 
-    // 開闢一個讓前端用 POST 呼叫 /api/auth/login 的入口
+    
     @PostMapping("/login")
     public Map<String, Object> login(@RequestBody Map<String, String> loginRequest) {
         String account = loginRequest.get("account");
         String password = loginRequest.get("password");
 
-        // 啟動大腦進行驗證
+        
         Map<String, Object> authResult = authService.authenticate(account, password);
 
         Map<String, Object> response = new HashMap<>();

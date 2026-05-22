@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class AuthDao {
 
-    // Spring Boot 會自動去讀取 application.properties 裡的資料庫設定
+    
     @Value("${spring.datasource.url}")
     private String dbUrl;
     @Value("${spring.datasource.username}")
@@ -18,7 +18,6 @@ public class AuthDao {
     @Value("${spring.datasource.password}")
     private String dbPassword;
 
-    // 驗證帳密並產生 Token 的核心 Raw SQL 邏輯
     public Map<String, Object> loginAndGetToken(String account, String password) {
         Map<String, Object> result = new HashMap<>();
         result.put("success", false);
@@ -46,7 +45,7 @@ public class AuthDao {
                 String userName = rs.getString("user_name");
                 String userType = rs.getString("user_type");
                 
-                // 帳密正確，產生一張隨機的 UUID 萬用通行證 (Token)
+               
                 String accessToken = UUID.randomUUID().toString();
                 String refreshToken = UUID.randomUUID().toString();
                 
@@ -62,7 +61,7 @@ public class AuthDao {
                     sessionPstmt.executeUpdate();
                 }
                 
-                // 返回前端需要的所有資訊
+                
                 Map<String, Object> data = new HashMap<>();
                 data.put("user_id", userId);
                 data.put("user_name", userName);
