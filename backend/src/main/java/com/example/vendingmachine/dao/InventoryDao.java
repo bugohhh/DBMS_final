@@ -107,6 +107,11 @@ public class InventoryDao {
         int updated = jdbcTemplate.update(sql, quantity, updateSource, machineId, drinkId);
         return updated > 0;
     }
+    public boolean delete(Long inventoryId) {
+        String sql = "DELETE FROM Inventory WHERE inventory_id = ?";
+        int deleted = jdbcTemplate.update(sql, inventoryId);
+        return deleted > 0;
+    }
 
     public boolean decreaseQuantityByMachineAndDrink(Long machineId, Long drinkId, Integer quantitySold) {
         String sql = """

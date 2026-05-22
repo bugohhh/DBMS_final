@@ -1,12 +1,13 @@
 package com.example.vendingmachine.service;
 
-import com.example.vendingmachine.dao.InventoryDao;
-import com.example.vendingmachine.model.Inventory;
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
+import com.example.vendingmachine.dao.InventoryDao;
+import com.example.vendingmachine.model.Inventory;
 
 @Service
 public class InventoryService {
@@ -44,6 +45,12 @@ public class InventoryService {
         boolean updated = inventoryDao.updateQuantityByMachineAndDrink(machineId, drinkId, quantity, "Auto");
         if (!updated) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found for this machine and drink");
+        }
+    }
+    public void deleteInventory(Long inventoryId){
+        boolean deleted = inventoryDao.delete(inventoryId);
+        if (!deleted) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory not found");
         }
     }
 

@@ -3,6 +3,7 @@ package com.example.vendingmachine.controller;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -57,12 +58,24 @@ public class InventoryController {
         requireValidToken(authorization);
         return ApiResponse.success("Inventory updated", inventoryService.updateInventory(inventoryId, inventory));
     }
+    //todo
+    @DeleteMapping("/inventory/{inventory_id}")
+    public ApiResponse<Void> deleteInventory(
+            @PathVariable("inventory_id") Long inventoryId,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        requireValidToken(authorization);
+        inventoryService.deleteInventory(inventoryId);
+        return ApiResponse.success("Inventory deleted", null);
+    }
 
     // Howard 指定：low-stock 不需要 token 驗證。
     @GetMapping("/inventory/low-stock")
     public ApiResponse<List<Inventory>> getLowStockInventory() {
         return ApiResponse.success("Low stock inventory list", inventoryService.getLowStockInventory());
     }
+
+
 
     // Howard 指定：public inventory 不需要 token 驗證。
     @GetMapping("/public/machines/{machine_id}/inventory")
