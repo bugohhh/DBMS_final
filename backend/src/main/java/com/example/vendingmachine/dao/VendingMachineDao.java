@@ -30,13 +30,13 @@ public class VendingMachineDao {
 
 
     public List<VendingMachine> findAll() {
-        String sql = "SELECT * FROM vending_machine";
+        String sql = "SELECT * FROM VendingMachine";
         return jdbcTemplate.query(sql, machineMapper);
     }
 
 
     public Optional<VendingMachine> findById(Long id) {
-        String sql = "SELECT * FROM vending_machine WHERE machine_id = ?";
+        String sql = "SELECT * FROM VendingMachine WHERE machine_id = ?";
         List<VendingMachine> list = jdbcTemplate.query(sql, machineMapper, id);
         return list.stream().findFirst();
     }
@@ -44,11 +44,17 @@ public class VendingMachineDao {
 
     public VendingMachine save(VendingMachine machine) {
         if (machine.getMachineId() == null) {
-            String sql = "INSERT INTO vending_machine (machine_name, region_id) VALUES (?, ?)";
-            jdbcTemplate.update(sql, machine.getMachineName(), machine.getRegionId());
+            String sql = "INSERT INTO VendingMachine (machine_name, machine_type, location, region_id) VALUES (?, ?, ?, ?)";
+            jdbcTemplate.update(
+                sql,
+                machine.getMachineName(),
+                "Smart",              // machine_type 預設值
+                machine.getLocation(),
+                machine.getRegionId()
+            );
             return machine;
         } else {
-            String sql = "UPDATE vending_machine SET machine_name = ?, region_id = ? WHERE machine_id = ?";
+            String sql = "UPDATE VendingMachine SET machine_name = ?, region_id = ? WHERE machine_id = ?";
             jdbcTemplate.update(sql, machine.getMachineName(), machine.getRegionId(), machine.getMachineId());
             return machine;
         }
@@ -56,7 +62,7 @@ public class VendingMachineDao {
 
 
     public void deleteById(Long id) {
-        String sql = "DELETE FROM vending_machine WHERE machine_id = ?";
+        String sql = "DELETE FROM VendingMachine WHERE machine_id = ?";
         jdbcTemplate.update(sql, id);
     }
 }

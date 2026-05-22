@@ -10,7 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -23,36 +25,27 @@ public class MachineController {
 
     @GetMapping("/machines")
     public ApiResponse<List<MachineDTO>> getAllMachines() {
+    try {
+        List<VendingMachine> machines = machineAndDrinkService.getAllMachines();
         List<MachineDTO> machineList = new ArrayList<>();
 
-        MachineDTO m1 = new MachineDTO();
-        m1.setMachine_id(1L);
-        m1.setMachine_name("商學院 1F");
-        m1.setRegion_name("文山區");
-        m1.setStatus("Normal");
-        
-        List<InventoryItemDTO> inv1 = new ArrayList<>();
-        inv1.add(new InventoryItemDTO("可口可樂", 18));
-        inv1.add(new InventoryItemDTO("原萃綠茶", 2));
-        inv1.add(new InventoryItemDTO("美粒果", 0));
-        m1.setInventory(inv1);
-        machineList.add(m1);
-
-        MachineDTO m2 = new MachineDTO();
-        m2.setMachine_id(2L);
-        m2.setMachine_name("圖書館 B1");
-        m2.setRegion_name("文山區");
-        m2.setStatus("Low");
-        
-        List<InventoryItemDTO> inv2 = new ArrayList<>();
-        inv2.add(new InventoryItemDTO("可口可樂", 5));
-        inv2.add(new InventoryItemDTO("原萃綠茶", 12));
-        inv2.add(new InventoryItemDTO("美粒果", 8));
-        m2.setInventory(inv2);
-        machineList.add(m2);
+        for (VendingMachine machine : machines) {
+            MachineDTO dto = new MachineDTO();
+            dto.setMachine_id(machine.getMachineId());
+            dto.setMachine_name(machine.getMachineName());
+            dto.setRegion_name("文山區");
+            dto.setStatus("Normal");
+            dto.setInventory(new ArrayList<>());
+            machineList.add(dto);
+        }
 
         return ApiResponse.success("成功取得機台資料", machineList);
+
+    } catch (Exception e) {
+        e.printStackTrace(); // 後端 console 會印出真正的錯誤
+        throw e;
     }
+}
 
 
     @GetMapping("/machines/{machine_id}")
@@ -62,8 +55,39 @@ public class MachineController {
 
 
     @PostMapping("/machines")
-    public ResponseEntity<VendingMachine> createMachine(@RequestBody VendingMachine machine) {
-        return ResponseEntity.ok(machineAndDrinkService.createMachine(machine));
+    public ResponseEntity<?> createMachine(@RequestBody Map<String, Object> request) {
+        try {
+            String machine_name = (String) request.get("machine_name");
+            String location = (String) request.get("location");
+            String region_name = (String) request.get("region_name");
+            
+            if (machine_name == null || region_name == null) {
+                return ResponseEntity.badRequest().body(
+                    ApiResponse.fail("缺少必填欄位：machine_name 或 region_name")
+                );
+            }
+            
+            // 建立 VendingMachine 對象
+            VendingMachine machine = new VendingMachine();
+            machine.setMachineName(machine_name);
+            machine.setLocation(location);
+            // 暫時固定 region_id = 1，實際應根據 region_name 從資料庫查詢 region_id
+            machine.setRegionId(1L);
+            
+            VendingMachine saved = machineAndDrinkService.createMachine(machine);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "機台新增成功");
+            response.put("data", saved);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(
+                ApiResponse.fail("新增機台失敗：" + e.getMessage())
+            );
+        }
     }
 
 
@@ -78,4 +102,5 @@ public class MachineController {
         machineAndDrinkService.deleteMachine(machineId);
         return ResponseEntity.noContent().build();
     }
+    
 }
