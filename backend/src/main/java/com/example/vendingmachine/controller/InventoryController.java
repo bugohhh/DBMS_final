@@ -1,9 +1,7 @@
 package com.example.vendingmachine.controller;
 
-import com.example.vendingmachine.dto.ApiResponse;
-import com.example.vendingmachine.model.Inventory;
-import com.example.vendingmachine.service.AuthService;
-import com.example.vendingmachine.service.InventoryService;
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,7 +13,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
+import com.example.vendingmachine.dto.ApiResponse;
+import com.example.vendingmachine.model.Inventory;
+import com.example.vendingmachine.service.AuthService;
+import com.example.vendingmachine.service.InventoryService;
 
 @RestController
 @RequestMapping("/api")
@@ -68,7 +69,7 @@ public class InventoryController {
     public ApiResponse<List<Inventory>> getPublicInventoryByMachineId(@PathVariable("machine_id") Long machineId) {
         return ApiResponse.success("Public inventory list", inventoryService.getInventoryByMachineId(machineId));
     }
-
+    //考慮移到auth controller，因為這裡是專門給前端讀取庫存的，不需要驗證token，直接公開就好。
     private void requireValidToken(String authorization) {
         String token = extractBearerToken(authorization);
         if (!authService.isValidToken(token)) {
