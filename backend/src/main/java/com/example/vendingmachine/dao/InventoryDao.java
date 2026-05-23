@@ -1,5 +1,6 @@
 package com.example.vendingmachine.dao;
 
+import com.example.vendingmachine.dto.PublicInventoryDTO;
 import com.example.vendingmachine.model.Inventory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -132,4 +133,25 @@ public class InventoryDao {
                 """;
         return jdbcTemplate.query(sql, inventoryMapper);
     }
+
+    public List<PublicInventoryDTO> findByMachineIdWithDrinkName(Long machineId) {
+    String sql = """
+        SELECT i.inventory_id, i.machine_id, i.drink_id,
+               d.drink_name, i.quantity, i.price, i.capacity
+        FROM Inventory i
+        JOIN Drink d ON i.drink_id = d.drink_id
+        WHERE i.machine_id = ?
+        """;
+    return jdbcTemplate.query(sql, (rs, rowNum) -> {
+        PublicInventoryDTO dto = new PublicInventoryDTO();
+        dto.setInventoryId(rs.getLong("inventory_id"));
+        dto.setMachineId(rs.getLong("machine_id"));
+        dto.setDrinkId(rs.getLong("drink_id"));
+        dto.setDrinkName(rs.getString("drink_name"));
+        dto.setQuantity(rs.getInt("quantity"));
+        dto.setPrice(rs.getDouble("price"));
+        dto.setCapacity(rs.getInt("capacity"));
+        return dto;
+    }, machineId);
+}
 }

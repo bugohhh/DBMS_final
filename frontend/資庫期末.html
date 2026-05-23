@@ -287,34 +287,25 @@
 </div>
 
 <!-- ═══════════════ CONSUMER ═══════════════ -->
-<div id="consumer-view" style="display:none; min-height:100vh; background:linear-gradient(135deg,#1a1d27,#0f1117); align-items:center; justify-content:center;">
+<div id="consumer-view" style="display:none; min-height:100vh; background:linear-gradient(135deg,#1a1d27,#0f1117); align-items:center; justify-content:center; flex-direction:column; gap:16px;">
+    <!-- 機台選擇列 -->
+    <div id="machine-selector" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:400px;padding:0 16px;"></div>
+    <!-- 手機框 -->
     <div class="phone-frame">
         <div class="phone-top">
             <div class="phone-top-nav">
-                <button onclick="logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;">
-                    ← 返回
-                </button>
+                <button onclick="logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;">← 返回</button>
                 <span style="font-size:11px;opacity:.6;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">附近販賣機</span>
                 <div style="width:60px"></div>
             </div>
-            <h3>NCCU 商學院 1F</h3>
-            <p>機台編號: VM-001 ｜ 距離 120m</p>
+            <h3 id="consumer-machine-name">載入中...</h3>
+            <p id="consumer-machine-id">機台編號: — </p>
         </div>
         <div class="phone-body">
             <p style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;">目前庫存狀態</p>
-            <div class="stock-item">
-                <div><div class="name">可口可樂 330ml</div><div class="price">NT$ 30</div></div>
-                <span class="badge badge-ok">✓ 充足</span>
+            <div id="consumer-inventory">
+                <div style="text-align:center;color:var(--muted);padding:20px">載入中...</div>
             </div>
-            <div class="stock-item">
-                <div><div class="name">原萃綠茶 500ml</div><div class="price">NT$ 25</div></div>
-                <span class="badge badge-warn">⚠ 剩餘 2 瓶</span>
-            </div>
-            <div class="stock-item" style="opacity:.5">
-                <div><div class="name">美粒果柳橙</div><div class="price">NT$ 35</div></div>
-                <span class="badge badge-err">✕ 售罄</span>
-            </div>
-            <p style="font-size:11px;color:var(--muted);margin-top:20px;text-align:center;">點擊機台位置可切換其他區域</p>
         </div>
     </div>
 </div>
@@ -348,7 +339,7 @@
 
 <!-- ═══════════════ MODAL: 新增機台 ═══════════════ -->
 <div class="modal-backdrop" id="modal-add-machine">
-    <div class="modal">
+    <div class="modal" style="width:560px">
         <h3>➕ 新增販賣機台</h3>
         <div class="form-group">
             <label>機台名稱</label>
@@ -361,6 +352,12 @@
         <div class="form-group">
             <label>位置描述</label>
             <input type="text" id="new-vm-location" placeholder="例：法學院一樓走廊" />
+        </div>
+        <div class="form-group">
+            <label>初始庫存設定</label>
+            <div id="new-vm-inventory" style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+                <div style="color:var(--muted);font-size:13px">載入飲料清單...</div>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" onclick="closeModal('modal-add-machine')">取消</button>
@@ -529,9 +526,92 @@ async function doLogin() {
     }
 }
 
-function loginConsumer() {
+async function loginConsumer() {
     document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('consumer-view').style.display = 'flex';
+    const cv = document.getElementById('consumer-view');
+    cv.style.display = 'flex';
+
+    // 取得所有機台
+    let machines = [];
+    try {
+        const res = await fetch(BASE_URL + '/machines');
+        const data = await res.json();
+        machines = data.data || [];
+    } catch(e) {
+        machines = MOCK.machines;
+    }
+
+    // 渲染機台選擇按鈕
+    const selector = document.getElementById('machine-selector');
+    selector.innerHTML = machines.map((m, i) => `
+        <button onclick="loadConsumerMachine(${m.machine_id}, '${m.machine_name}')"
+            style="padding:8px 14px;border-radius:20px;border:1px solid var(--border);
+                   background:${i===0?'var(--accent)':'var(--surface)'};
+                   color:${i===0?'#fff':'var(--muted)'};
+                   cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;
+                   transition:all .2s;"
+            id="machine-btn-${m.machine_id}">
+            ${m.machine_name}
+        </button>
+    `).join('');
+
+    // 預設載入第一台
+    if (machines.length > 0) {
+        loadConsumerMachine(machines[0].machine_id, machines[0].machine_name);
+    }
+}
+
+async function loadConsumerMachine(machineId, machineName) {
+    // 更新按鈕樣式
+    document.querySelectorAll('[id^="machine-btn-"]').forEach(btn => {
+        btn.style.background = 'var(--surface)';
+        btn.style.color = 'var(--muted)';
+    });
+    const activeBtn = document.getElementById('machine-btn-' + machineId);
+    if (activeBtn) { activeBtn.style.background = 'var(--accent)'; activeBtn.style.color = '#fff'; }
+
+    // 更新標題
+    document.getElementById('consumer-machine-name').textContent = machineName;
+    document.getElementById('consumer-machine-id').textContent = `機台編號: VM-00${machineId}`;
+    document.getElementById('consumer-inventory').innerHTML =
+        '<div style="text-align:center;color:var(--muted);padding:20px">載入中...</div>';
+
+    // 取得庫存
+    try {
+        const res = await fetch(`${BASE_URL}/public/machines/${machineId}/inventory`);
+        const data = await res.json();
+        const items = data.data || [];
+
+        if (items.length === 0) {
+            document.getElementById('consumer-inventory').innerHTML =
+                '<div style="text-align:center;color:var(--muted);padding:20px">此機台暫無庫存資料</div>';
+            return;
+        }
+
+        document.getElementById('consumer-inventory').innerHTML = items.map(item => {
+            const qty = item.quantity;
+            let badge, opacity = '1';
+            if (qty === 0) {
+                badge = `<span class="badge badge-err">✕ 售罄</span>`;
+                opacity = '0.5';
+            } else if (qty <= 5) {
+                badge = `<span class="badge badge-warn">⚠ 剩餘 ${qty} 瓶</span>`;
+            } else {
+                badge = `<span class="badge badge-ok">✓ 充足</span>`;
+            }
+            return `
+                <div class="stock-item" style="opacity:${opacity}">
+                    <div>
+                        <div class="name">${item.drinkName}</div>
+                        <div class="price">NT$ ${item.price}</div>
+                    </div>
+                    ${badge}
+                </div>`;
+        }).join('');
+    } catch(e) {
+        document.getElementById('consumer-inventory').innerHTML =
+            '<div style="text-align:center;color:var(--danger);padding:20px">載入失敗</div>';
+    }
 }
 
 function enterSystem() {
@@ -688,7 +768,7 @@ async function renderMachines(area) {
     area.innerHTML = `
         <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
             <div><h2>機台管理</h2><p>管理所有販賣機台資訊</p></div>
-            ${isManager ? `<button class="btn btn-primary" onclick="openModal('modal-add-machine')">+ 新增機台</button>` : ''}
+            ${isManager ? `<button class="btn btn-primary" onclick="openAddMachineModal()">+ 新增機台</button>` : ''}
         </div>
         <div class="card">
             ${machines.length === 0 ? `
@@ -917,33 +997,91 @@ async function deleteMachine(machineId) {
     showToast(`✅ 機台 #${machineId} 已刪除`);
     switchTab('machines'); // 重新載入列表
 }
+async function openAddMachineModal() {
+    openModal('modal-add-machine');
+    const container = document.getElementById('new-vm-inventory');
+    container.innerHTML = '<div style="color:var(--muted);font-size:13px">載入中...</div>';
 
+    try {
+        const res = await fetch(`${BASE_URL}/public/drinks`);
+        const data = await res.json();
+        const drinks = data.data || [];
+
+        container.innerHTML = drinks.map(d => `
+            <div style="display:flex;align-items:center;gap:12px;background:var(--surface2);padding:12px;border-radius:10px;border:1px solid var(--border)">
+                <div style="flex:1;font-size:13px;font-weight:700">${d.drinkName}</div>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:12px;color:var(--muted)">數量</span>
+                    <input type="number" min="0" max="30" value="0"
+                        id="inv-qty-${d.drinkId}"
+                        style="width:60px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;text-align:center" />
+                    <span style="font-size:12px;color:var(--muted)">價格 NT$</span>
+                    <input type="number" min="0" value="30"
+                        id="inv-price-${d.drinkId}"
+                        style="width:64px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;text-align:center" />
+                </div>
+            </div>
+        `).join('');
+
+        container.dataset.drinks = JSON.stringify(drinks.map(d => d.drinkId));
+    } catch(e) {
+        container.innerHTML = '<div style="color:var(--danger);font-size:13px">載入飲料清單失敗</div>';
+    }
+}
 // ── 新增機台 ──
 async function submitAddMachine() {
-    const machine_name = document.getElementById('new-vm-name').value;
-    const region_name = document.getElementById('new-vm-area').value;
-    const location = document.getElementById('new-vm-location').value;
+    const machine_name = document.getElementById('new-vm-name').value.trim();
+    const region_name = document.getElementById('new-vm-area').value.trim();
+    const location = document.getElementById('new-vm-location').value.trim();
+
+    if (!machine_name || !region_name) {
+        showToast('❌ 請填寫機台名稱和地區');
+        return;
+    }
+
+    // 收集庫存資料
+    const container = document.getElementById('new-vm-inventory');
+    const drinkIds = JSON.parse(container.dataset.drinks || '[]');
+    const inventoryItems = drinkIds.map(drinkId => ({
+        drinkId,
+        quantity: parseInt(document.getElementById(`inv-qty-${drinkId}`)?.value || 0),
+        price: parseFloat(document.getElementById(`inv-price-${drinkId}`)?.value || 0),
+    }));
 
     if (USE_MOCK) {
-        // 模擬新增
         const newId = MOCK.machines.length > 0 ? Math.max(...MOCK.machines.map(m => m.machine_id)) + 1 : 1;
-        MOCK.machines.push({
-            machine_id: newId, machine_name, region_name, status: "Normal", inventory: []
-        });
+        MOCK.machines.push({ machine_id: newId, machine_name, region_name, status: "Normal", inventory: [] });
     } else {
-        // 真實 API 呼叫
-        await apiFetch('POST', '/machines', { machine_name, region_name, location });
+        try {
+            // 1. 新增機台
+            const res = await apiFetch('POST', '/machines', { machine_name, region_name, location });
+            const data = await res.json();
+            const newMachineId = data.data?.machineId || data.data?.machine_id;
+
+            // 2. 新增庫存
+            if (newMachineId) {
+                for (const item of inventoryItems) {
+                    await apiFetch('POST', '/inventory', {
+                        machineId: newMachineId,
+                        drinkId: item.drinkId,
+                        quantity: item.quantity,
+                        price: item.price,
+                        lowStockThreshold: 5,
+                        capacity: 30,
+                    });
+                }
+            }
+        } catch(e) {
+            showToast('❌ 新增失敗');
+            return;
+        }
     }
 
     closeModal('modal-add-machine');
     showToast(`✅ 機台 ${machine_name} 已新增！`);
-    
-    // 清空表單
     document.getElementById('new-vm-name').value = '';
     document.getElementById('new-vm-location').value = '';
     document.getElementById('new-vm-area').value = '';
-    
-    // 重新載入機台列表
     switchTab('machines');
 }
 

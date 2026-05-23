@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.vendingmachine.dao.InventoryDao;
+import com.example.vendingmachine.dto.PublicInventoryDTO;
 import com.example.vendingmachine.model.Inventory;
 
 @Service
@@ -82,5 +83,9 @@ public class InventoryService {
         if (inventory == null || inventory.getQuantity() == null || inventory.getQuantity() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "non-negative quantity is required");
         }
+    }
+
+    public List<PublicInventoryDTO> getPublicInventoryByMachineId(Long machineId) {
+        return inventoryDao.findByMachineIdWithDrinkName(machineId);
     }
 }

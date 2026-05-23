@@ -61,8 +61,11 @@ public class VendingMachineDao {
     }
 
 
-    public void deleteById(Long id) {
-        String sql = "DELETE FROM VendingMachine WHERE machine_id = ?";
-        jdbcTemplate.update(sql, id);
+    public boolean deleteById(Long machineId) {
+        // 先刪該機台的庫存
+        jdbcTemplate.update("DELETE FROM Inventory WHERE machine_id = ?", machineId);
+        // 再刪機台
+        int deleted = jdbcTemplate.update("DELETE FROM VendingMachine WHERE machine_id = ?", machineId);
+        return deleted > 0;
     }
 }
