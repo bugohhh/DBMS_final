@@ -3,9 +3,18 @@ package com.example.vendingmachine.service;
 import com.example.vendingmachine.dao.AuthDao;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 
+import java.sql.PreparedStatement;
+import java.util.HashMap;
 import java.util.Map;
+
 
 @Service
 public class AuthService {
@@ -25,6 +34,40 @@ public class AuthService {
     // 原本登入驗證功能保留：Controller 呼叫這個方法登入並取得 token。
     public Map<String, Object> authenticate(String account, String password) {
         return authDao.loginAndGetToken(account, password);
+    }
+    //補貨人員註冊
+    public Map<String, Object> registerStaff(String userName, String account, String password) {
+    // 檢查帳號是否已存在
+    int count = jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM Account WHERE account = ?", Integer.class, account);
+    if (count > 0) throw new RuntimeException("帳號已存在");
+
+    // 1. 插入 User
+    KeyHolder keyHolder = new GeneratedKeyHolder();
+    jdbcTemplate.update(connection -> {
+        PreparedStatement ps = connection.prepareStatement(
+            "INSERT INTO User (user_name, user_type) VALUES (?, 'Staff')",
+            Statement.RETURN_GENERATED_KEYS);
+        ps.setString(1, userName);
+        return ps;
+    }, keyHolder);
+    Number key = keyHolder.getKey();
+    if (key == null) throw new RuntimeException("無法取得新增的 user_id");
+    long userId = key.longValue();
+
+    // 2. 插入 Account（密碼直接存，正式環境應該 hash）
+    jdbcTemplate.update(
+        "INSERT INTO Account (user_id, account, password_hash, user_name, user_type) VALUES (?, ?, ?, ?, 'Staff')",
+        userId, account, password, userName);
+
+    // 3. 插入 Staff
+    jdbcTemplate.update("INSERT INTO Staff (user_id) VALUES (?)", userId);
+
+    Map<String, Object> result = new HashMap<>();
+        result.put("user_id", userId);
+        result.put("user_name", userName);
+        result.put("account", account);
+        return result;
     }
 
     /**

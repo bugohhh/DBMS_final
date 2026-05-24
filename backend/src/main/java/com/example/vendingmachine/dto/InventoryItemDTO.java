@@ -9,7 +9,7 @@ public class InventoryItemDTO {
         this.drink_name = drink_name;
         this.quantity = quantity;
     }
-
+    public InventoryItemDTO() {}
     // Getters and Setters...
     public String getDrink_name() { return drink_name; }
     public void setDrink_name(String drink_name) { this.drink_name = drink_name; }

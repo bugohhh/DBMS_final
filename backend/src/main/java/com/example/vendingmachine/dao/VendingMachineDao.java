@@ -9,6 +9,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 
 @Repository
 public class VendingMachineDao {
@@ -45,13 +49,18 @@ public class VendingMachineDao {
     public VendingMachine save(VendingMachine machine) {
         if (machine.getMachineId() == null) {
             String sql = "INSERT INTO VendingMachine (machine_name, machine_type, location, region_id) VALUES (?, ?, ?, ?)";
-            jdbcTemplate.update(
-                sql,
-                machine.getMachineName(),
-                "Smart",              // machine_type 預設值
-                machine.getLocation(),
-                machine.getRegionId()
-            );
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+                ps.setString(1, machine.getMachineName());
+                ps.setString(2, "Smart");
+                ps.setString(3, machine.getLocation());
+                ps.setLong(4, machine.getRegionId());
+                return ps;
+            }, keyHolder);
+            
+            Number key = keyHolder.getKey();
+            if (key != null) machine.setMachineId(key.longValue());
             return machine;
         } else {
             String sql = "UPDATE VendingMachine SET machine_name = ?, region_id = ? WHERE machine_id = ?";

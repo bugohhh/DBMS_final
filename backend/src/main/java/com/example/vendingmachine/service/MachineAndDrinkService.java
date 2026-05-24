@@ -2,9 +2,11 @@ package com.example.vendingmachine.service;
 
 import com.example.vendingmachine.dao.DrinkDao;
 import com.example.vendingmachine.dao.VendingMachineDao;
+import com.example.vendingmachine.dto.InventoryItemDTO;
 import com.example.vendingmachine.model.Drink;
 import com.example.vendingmachine.model.VendingMachine;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
@@ -17,9 +19,27 @@ public class MachineAndDrinkService {
     @Autowired
     private DrinkDao drinkDao;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
 
     public List<VendingMachine> getAllMachines() {
         return vendingMachineDao.findAll();
+    }
+    public List<InventoryItemDTO> getInventoryByMachineId(Long machineId) {
+        String sql = """
+            SELECT i.inventory_id, i.machine_id, i.drink_id,
+                d.drink_name, i.quantity, i.price, i.capacity
+            FROM Inventory i
+            JOIN Drink d ON i.drink_id = d.drink_id
+            WHERE i.machine_id = ?
+            """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            InventoryItemDTO dto = new InventoryItemDTO();
+            dto.setDrink_name(rs.getString("drink_name"));
+            dto.setQuantity(rs.getInt("quantity"));
+            return dto;
+        }, machineId);
     }
 
 

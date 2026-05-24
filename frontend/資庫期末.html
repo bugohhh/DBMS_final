@@ -230,7 +230,7 @@
         <h1>Smart Vending</h1>
         <p>智慧販賣機管理平台</p>
 
-        <div class="role-tabs">
+        <div class="role-tabs" id="role-tabs">
             <button class="role-tab active" onclick="selectRole('admin', this)">系統管理員</button>
             <button class="role-tab" onclick="selectRole('staff', this)">補貨人員</button>
         </div>
@@ -246,8 +246,27 @@
             </div>
             <p class="error-msg" id="login-err">帳號或密碼錯誤，請重試</p>
             <button class="btn-login" onclick="doLogin()">登入系統</button>
+            <div id="register-link" style="text-align:center;margin-top:12px;display:none">
+                 <button onclick="toggleRegister(true)" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;">還沒有帳號？點此註冊</button>
+            </div>
         </div>
-
+        <div id="register-form" style="display:none">
+             <div class="form-group">
+                <label>姓名</label>
+                <input type="text" id="inp-reg-name" placeholder="輸入真實姓名" />
+            </div>
+            <div class="form-group">
+                <label>帳號</label>
+                <input type="text" id="inp-reg-account" placeholder="設定登入帳號" />
+            </div>
+            <div class="form-group">
+                <label>密碼</label>
+                <input type="password" id="inp-reg-pw" placeholder="設定密碼" />
+            </div>
+            <p class="error-msg" id="reg-err"></p>
+            <button class="btn-login" onclick="doRegister()">註冊帳號</button>
+            <button onclick="toggleRegister(false)" style="width:100%;margin-top:8px;padding:10px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-family:inherit;">← 返回登入</button>
+        </div>
         <div class="divider">── 或 ──</div>
         <button class="btn-consumer" onclick="loginConsumer()">
             <i class="fas fa-user mr-1"></i> 消費者模式（免登入）
@@ -476,6 +495,44 @@ function selectRole(role, el) {
     selectedLoginRole = role;
     document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
+    
+    // 只有補貨人員顯示註冊連結
+    document.getElementById('register-link').style.display = 
+        role === 'staff' ? 'block' : 'none';
+}
+function toggleRegister(show) {
+    document.getElementById('login-form').style.display = show ? 'none' : 'block';
+    document.getElementById('register-form').style.display = show ? 'block' : 'none';
+    document.getElementById('role-tabs').style.display = show ? 'none' : 'flex';
+}
+
+async function doRegister() {
+    const user_name = document.getElementById('inp-reg-name').value.trim();
+    const account   = document.getElementById('inp-reg-account').value.trim();
+    const password  = document.getElementById('inp-reg-pw').value.trim();
+    const err = document.getElementById('reg-err');
+    err.style.display = 'none';
+
+    if (!user_name || !account || !password) {
+        err.textContent = '請填寫所有欄位'; err.style.display = 'block'; return;
+    }
+
+    try {
+        const res = await fetch(BASE_URL + '/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_name, account, password }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+            err.textContent = data.message || '註冊失敗'; err.style.display = 'block'; return;
+        }
+        toggleRegister(false);
+        document.getElementById('inp-id').value = account;
+        showToast('✅ 註冊成功！請登入');
+    } catch(e) {
+        err.textContent = '無法連線至伺服器'; err.style.display = 'block';
+    }
 }
 
 // POST /auth/login — 對應 API 規格 §2.1
@@ -1056,7 +1113,9 @@ async function submitAddMachine() {
             // 1. 新增機台
             const res = await apiFetch('POST', '/machines', { machine_name, region_name, location });
             const data = await res.json();
+            console.log('新增機台回傳:', JSON.stringify(data)); // 加這行
             const newMachineId = data.data?.machineId || data.data?.machine_id;
+            console.log('newMachineId:', newMachineId); // 加這行
 
             // 2. 新增庫存
             if (newMachineId) {

@@ -23,29 +23,43 @@ public class MachineController {
     private MachineAndDrinkService machineAndDrinkService; 
 
 
-    @GetMapping("/machines")
+   @GetMapping("/machines")
     public ApiResponse<List<MachineDTO>> getAllMachines() {
-    try {
-        List<VendingMachine> machines = machineAndDrinkService.getAllMachines();
-        List<MachineDTO> machineList = new ArrayList<>();
+        try {
+            List<VendingMachine> machines = machineAndDrinkService.getAllMachines();
+            List<MachineDTO> machineList = new ArrayList<>();
 
-        for (VendingMachine machine : machines) {
-            MachineDTO dto = new MachineDTO();
-            dto.setMachine_id(machine.getMachineId());
-            dto.setMachine_name(machine.getMachineName());
-            dto.setRegion_name("文山區");
-            dto.setStatus("Normal");
-            dto.setInventory(new ArrayList<>());
-            machineList.add(dto);
+            for (VendingMachine machine : machines) {
+                MachineDTO dto = new MachineDTO();
+                dto.setMachine_id(machine.getMachineId());
+                dto.setMachine_name(machine.getMachineName());
+                dto.setRegion_name("文山區");
+
+                List<InventoryItemDTO> inventory = machineAndDrinkService
+                    .getInventoryByMachineId(machine.getMachineId());
+                dto.setInventory(inventory);
+
+                boolean hasCritical = inventory.stream().anyMatch(i -> i.getQuantity() == 0);
+                boolean hasLow = inventory.stream().anyMatch(i -> i.getQuantity() > 0 && i.getQuantity() <= 5);
+
+                if (hasCritical) {
+                    dto.setStatus("Critical");
+                } else if (hasLow) {
+                    dto.setStatus("Low");
+                } else {
+                    dto.setStatus("Normal");
+                }
+
+                machineList.add(dto);
+            }
+
+            return ApiResponse.success("成功取得機台資料", machineList);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
         }
-
-        return ApiResponse.success("成功取得機台資料", machineList);
-
-    } catch (Exception e) {
-        e.printStackTrace(); // 後端 console 會印出真正的錯誤
-        throw e;
     }
-}
+
 
 
     @GetMapping("/machines/{machine_id}")
@@ -79,7 +93,10 @@ public class MachineController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "機台新增成功");
-            response.put("data", saved);
+            Map<String, Object> data = new HashMap<>();
+            data.put("machine_id", saved.getMachineId());
+            data.put("machine_name", saved.getMachineName());
+            response.put("data", data);
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -102,5 +119,6 @@ public class MachineController {
         machineAndDrinkService.deleteMachine(machineId);
         return ResponseEntity.noContent().build();
     }
+    
     
 }

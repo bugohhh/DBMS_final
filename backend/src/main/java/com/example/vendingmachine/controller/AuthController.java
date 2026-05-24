@@ -33,4 +33,28 @@ public class AuthController {
         }
         return response;
     }
+    @PostMapping("/register")
+public Map<String, Object> register(@RequestBody Map<String, String> request) {
+    String userName = request.get("user_name");
+    String account = request.get("account");
+    String password = request.get("password");
+
+    Map<String, Object> response = new HashMap<>();
+    if (userName == null || account == null || password == null) {
+        response.put("success", false);
+        response.put("message", "缺少必填欄位");
+        return response;
+    }
+
+    try {
+        Map<String, Object> result = authService.registerStaff(userName, account, password);
+        response.put("success", true);
+        response.put("message", "註冊成功");
+        response.put("data", result);
+    } catch (Exception e) {
+        response.put("success", false);
+        response.put("message", e.getMessage());
+    }
+    return response;
+}
 }
