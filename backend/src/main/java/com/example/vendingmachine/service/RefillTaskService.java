@@ -6,19 +6,23 @@ import com.example.vendingmachine.model.Inventory;
 import com.example.vendingmachine.model.RefillTask;
 import com.example.vendingmachine.model.RefillDetail;
 
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class RefillTaskService {
 
     private final RefillTaskDao refillTaskDao;
+    private final InventoryService inventoryService;
 
-    public RefillTaskService(RefillTaskDao refillTaskDao) {
+    public RefillTaskService(RefillTaskDao refillTaskDao, InventoryService inventoryService) {
         this.refillTaskDao = refillTaskDao;
+        this.inventoryService = inventoryService;
     }
 
     public RefillTask createRefillTask(RefillTask refillTask) {
@@ -103,5 +107,27 @@ public class RefillTaskService {
         if (refillDetailsId == null || refillDetail == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refill details ID and refill detail are required");
         }
+    }
+
+    public void saveRefillDetail(Long refillTaskId, Long machineId, Long drinkId, Integer actualQty) {
+        refillTaskDao.createRefillDetail(refillTaskId, machineId, drinkId, actualQty);
+    }
+
+    public RefillTask completeWithItems(Long refillTaskId, Long machineId, List<Map<String, Object>> items) {
+        // 更新每個飲料的庫存
+        if (machineId != null && items != null) {
+            for (Map<String, Object> item : items) {
+                Long drinkId = ((Number) item.get("drink_id")).longValue();
+                Integer actualQty = ((Number) item.get("actual_quantity")).intValue();
+                if (actualQty > 0) {
+                    // 取得現有庫存數量再加上補貨數量
+                    inventoryService.addInventoryQuantity(machineId, drinkId, actualQty);
+                    // 儲存 RefillDetail
+                    refillTaskDao.createRefillDetail(refillTaskId, machineId, drinkId, actualQty);
+                }
+            }
+        }
+        // 更新任務狀態
+        return updateRefillTaskStatus(refillTaskId, "Completed");
     }
 }

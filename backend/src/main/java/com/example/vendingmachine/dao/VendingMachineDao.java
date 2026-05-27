@@ -28,6 +28,7 @@ public class VendingMachineDao {
             machine.setMachineId(rs.getLong("machine_id"));
             machine.setMachineName(rs.getString("machine_name"));
             machine.setRegionId(rs.getLong("region_id"));
+            machine.setStatus(rs.getString("status"));
             return machine;
         }
     };

@@ -35,7 +35,9 @@ public class MachineController {
                 MachineDTO dto = new MachineDTO();
                 dto.setMachine_id(machine.getMachineId());
                 dto.setMachine_name(machine.getMachineName());
-                dto.setRegion_name("文山區");
+                dto.setRegion_id(machine.getRegionId());
+                dto.setRegion_name(machineAndDrinkService.getRegionNameById(machine.getRegionId()));
+                dto.setReported_status(machine.getStatus());
 
                 List<InventoryItemDTO> inventory = machineAndDrinkService
                     .getInventoryByMachineId(machine.getMachineId());

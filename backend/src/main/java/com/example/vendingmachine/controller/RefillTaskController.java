@@ -9,6 +9,7 @@ import com.example.vendingmachine.service.RefillTaskService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -58,9 +59,16 @@ public class RefillTaskController {
     }
 
     @PutMapping("/refill-tasks/{refilltask_id}/complete")
-    public ApiResponse<RefillTask> completeRefillTask(@PathVariable("refilltask_id") Long refillTaskId,
-                                                      @RequestHeader(value = "Authorization", required = false) String authorization) {
-        // requireValidToken(authorization);
+    public ApiResponse<RefillTask> completeRefillTask(
+            @PathVariable("refilltask_id") Long refillTaskId,
+            @RequestBody(required = false) Map<String, Object> request,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+
+        if (request != null && request.containsKey("items")) {
+            List<Map<String, Object>> items = (List<Map<String, Object>>) request.get("items");
+            Long machineId = request.get("machine_id") != null ? ((Number) request.get("machine_id")).longValue() : null;
+            return ApiResponse.success("Refill task completed", refillTaskService.completeWithItems(refillTaskId, machineId, items));
+        }
         return ApiResponse.success("Refill task completed", refillTaskService.updateRefillTaskStatus(refillTaskId, "Completed"));
     }
 

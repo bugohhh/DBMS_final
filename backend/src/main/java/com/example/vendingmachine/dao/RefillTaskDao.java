@@ -82,7 +82,7 @@ public class RefillTaskDao {
     }
 
     public RefillTask create(RefillTask refillTask) {
-        String sql = "INSERT INTO RefillTask (team_id, region_id, machine_id, task_date, task_type, created_time, status) VALUES (?, ?, ?, ?, NOW(), ?)";
+        String sql = "INSERT INTO RefillTask (team_id, region_id, machine_id, task_date, task_type, created_time, status) VALUES (?, ?, ?, ?, ?, NOW(), ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcTemplate.update(connection -> {
@@ -122,6 +122,11 @@ public class RefillTaskDao {
         return updated > 0;
     }
 
+    public void createRefillDetail(Long refillTaskId, Long machineId, Long drinkId, Integer actualQty) {
+        String sql = "INSERT INTO RefillDetail (refilltask_id, machine_id, drink_id, actual_quantity, refill_time) VALUES (?, ?, ?, ?, NOW())";
+        jdbcTemplate.update(sql, refillTaskId, machineId, drinkId, actualQty);
+    }
+
     public RefillDetail updateRefillDetail(Long refillDetailsId, RefillDetail refillDetail) {
         // Minimal implementation: update actual_quantity and last_restock
         String sql = "UPDATE RefillDetail SET actual_quantity = ?, last_restock = NOW() WHERE refilldetails_id = ?";
@@ -130,8 +135,10 @@ public class RefillTaskDao {
     }
 
     public boolean delete(Long refillTaskId) {
-        String sql = "DELETE FROM RefillTask WHERE refilltask_id = ?";
-        int deleted = jdbcTemplate.update(sql, refillTaskId);
+        // 先刪關聯的 RefillDetail
+        jdbcTemplate.update("DELETE FROM RefillDetail WHERE refilltask_id = ?", refillTaskId);
+        // 再刪任務
+        int deleted = jdbcTemplate.update("DELETE FROM RefillTask WHERE refilltask_id = ?", refillTaskId);
         return deleted > 0;
     }
 }

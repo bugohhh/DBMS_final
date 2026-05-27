@@ -170,12 +170,9 @@
     <div class="modal">
         <h3>➕ 新增分派任務</h3>
         <div class="form-group">
-            <label>地區</label>
-            <select id="new-assign-region" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);">
-                <option value="">-- 選擇地區 --</option>
-                <option value="2">文山區</option>
-                <option value="3">信義區</option>
-                <option value="4">大同區</option>
+            <label>選擇機台</label>
+            <select id="new-assign-machine" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);">
+                <option value="">-- 載入中... --</option>
             </select>
         </div>
         <div class="form-group">
@@ -220,6 +217,26 @@
         <div class="modal-footer">
             <button class="btn btn-ghost" onclick="closeModal('modal-add-machine')">取消</button>
             <button class="btn btn-primary" onclick="submitAddMachine()">新增</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ MODAL: Staff 回報完成 ═══════════════ -->
+<div class="modal-backdrop" id="modal-staff-complete">
+    <div class="modal">
+        <h3>✅ 回報補貨完成</h3>
+        <div class="form-group">
+            <label>任務編號</label>
+            <div style="color:var(--muted);font-family:var(--mono);font-size:14px;padding:8px;background:var(--surface2);border-radius:8px;" id="staff-complete-task-id"></div>
+        </div>
+        <div id="staff-complete-items" style="display:flex;flex-direction:column;gap:10px;margin:16px 0;"></div>
+        <div class="form-group">
+            <label>備註（選填）</label>
+            <input type="text" id="staff-complete-note" placeholder="例：機台外觀有刮傷" />
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-staff-complete')">取消</button>
+            <button class="btn btn-primary" onclick="submitStaffComplete()">確認送出</button>
         </div>
     </div>
 </div>

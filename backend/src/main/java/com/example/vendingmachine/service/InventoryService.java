@@ -88,4 +88,8 @@ public class InventoryService {
     public List<PublicInventoryDTO> getPublicInventoryByMachineId(Long machineId) {
         return inventoryDao.findByMachineIdWithDrinkName(machineId);
     }
+
+    public void addInventoryQuantity(Long machineId, Long drinkId, Integer addQty) {
+        inventoryDao.addQuantityByMachineAndDrink(machineId, drinkId, addQty);
+    }
 }

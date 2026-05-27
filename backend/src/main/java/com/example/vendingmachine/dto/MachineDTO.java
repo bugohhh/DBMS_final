@@ -9,6 +9,7 @@ public class MachineDTO {
     private Long region_id;
     private String status;
     private List<InventoryItemDTO> inventory;
+    private String reported_status;
 
     // Getters and Setters...
     public Long getMachine_id() { return machine_id; }
@@ -23,4 +24,6 @@ public class MachineDTO {
     public Long getRegion_id() { return region_id; }
     public void setRegion_id(Long region_id) { this.region_id = region_id; }
     public void setInventory(List<InventoryItemDTO> inventory) { this.inventory = inventory; }
+    public String getReported_status() { return reported_status; }
+    public void setReported_status(String reported_status) { this.reported_status = reported_status; }
 }

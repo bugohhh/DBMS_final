@@ -37,6 +37,7 @@ public class MachineAndDrinkService {
             """;
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
             InventoryItemDTO dto = new InventoryItemDTO();
+            dto.setDrink_id(rs.getLong("drink_id"));
             dto.setDrink_name(rs.getString("drink_name"));
             dto.setQuantity(rs.getInt("quantity"));
             return dto;
@@ -56,15 +57,29 @@ public class MachineAndDrinkService {
                     "JOIN Staff s ON rt.team_id = s.team_id " +
                     "JOIN Region rg ON vm.region_id = rg.region_id " +
                     "WHERE s.user_id = ?";
-        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+        List<MachineDTO> machines = jdbcTemplate.query(sql, (rs, rowNum) -> {
             MachineDTO dto = new MachineDTO();
             dto.setMachine_id(rs.getLong("machine_id"));
             dto.setMachine_name(rs.getString("machine_name"));
             dto.setRegion_name(rs.getString("region_name"));
             dto.setRegion_id(rs.getLong("region_id"));
-            dto.setStatus(rs.getString("status"));
+            dto.setReported_status(rs.getString("status"));
             return dto;
         }, userId);
+
+        // 每台機器撈庫存
+        for (MachineDTO dto : machines) {
+            List<InventoryItemDTO> inventory = getInventoryByMachineId(dto.getMachine_id());
+            dto.setInventory(inventory);
+        }
+        return machines;
+    }
+
+    public String getRegionNameById(Long regionId) {
+        if (regionId == null) return null;
+        String sql = "SELECT region_name FROM Region WHERE region_id = ?";
+        List<String> result = jdbcTemplate.query(sql, (rs, rowNum) -> rs.getString("region_name"), regionId);
+        return result.isEmpty() ? null : result.get(0);
     }
 
     public VendingMachine createMachine(VendingMachine machine) {

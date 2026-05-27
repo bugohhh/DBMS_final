@@ -114,6 +114,11 @@ public class InventoryDao {
         return deleted > 0;
     }
 
+    public void addQuantityByMachineAndDrink(Long machineId, Long drinkId, Integer addQty) {
+        String sql = "UPDATE Inventory SET quantity = quantity + ? WHERE machine_id = ? AND drink_id = ?";
+        jdbcTemplate.update(sql, addQty, machineId, drinkId);
+    }
+
     public boolean decreaseQuantityByMachineAndDrink(Long machineId, Long drinkId, Integer quantitySold) {
         String sql = """
                 UPDATE Inventory
@@ -135,23 +140,25 @@ public class InventoryDao {
     }
 
     public List<PublicInventoryDTO> findByMachineIdWithDrinkName(Long machineId) {
-    String sql = """
-        SELECT i.inventory_id, i.machine_id, i.drink_id,
-               d.drink_name, i.quantity, i.price, i.capacity
-        FROM Inventory i
-        JOIN Drink d ON i.drink_id = d.drink_id
-        WHERE i.machine_id = ?
-        """;
-    return jdbcTemplate.query(sql, (rs, rowNum) -> {
-        PublicInventoryDTO dto = new PublicInventoryDTO();
-        dto.setInventoryId(rs.getLong("inventory_id"));
-        dto.setMachineId(rs.getLong("machine_id"));
-        dto.setDrinkId(rs.getLong("drink_id"));
-        dto.setDrinkName(rs.getString("drink_name"));
-        dto.setQuantity(rs.getInt("quantity"));
-        dto.setPrice(rs.getDouble("price"));
-        dto.setCapacity(rs.getInt("capacity"));
-        return dto;
-    }, machineId);
-}
+        String sql = """
+            SELECT i.inventory_id, i.machine_id, i.drink_id,
+                d.drink_name, i.quantity, i.price, i.capacity
+            FROM Inventory i
+            JOIN Drink d ON i.drink_id = d.drink_id
+            WHERE i.machine_id = ?
+            """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            PublicInventoryDTO dto = new PublicInventoryDTO();
+            dto.setInventoryId(rs.getLong("inventory_id"));
+            dto.setMachineId(rs.getLong("machine_id"));
+            dto.setDrinkId(rs.getLong("drink_id"));
+            dto.setDrinkName(rs.getString("drink_name"));
+            dto.setQuantity(rs.getInt("quantity"));
+            dto.setPrice(rs.getDouble("price"));
+            dto.setCapacity(rs.getInt("capacity"));
+            return dto;
+        }, machineId);
+    }
+
+
 }

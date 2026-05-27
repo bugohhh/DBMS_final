@@ -155,10 +155,10 @@ function switchStaffTab(type) {
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);">
                 <span><i class="far fa-calendar-alt"></i> ${t.taskDate}</span>
                 ${type === 'pending'
-                    ? `<button class="btn btn-primary" onclick="completeTask(${t.refillTaskId})" style="padding:6px 16px;font-size:12px;">
-                           <i class="fas fa-check"></i> 回報完成
-                       </button>`
-                    : '<span style="color:var(--accent)">✓ 已完成</span>'}
+                ? `<button class="btn btn-primary" onclick="openStaffCompleteModal(${t.refillTaskId})" style="padding:6px 16px;font-size:12px;">
+                    <i class="fas fa-check"></i> 回報完成
+                </button>`
+                : '<span style="color:var(--accent)">✓ 已完成</span>'}
             </div>
         </div>
     `).join('');
@@ -252,14 +252,24 @@ async function submitRestock() {
 /**
  * 打開新增分派任務的 Modal
  */
-function openAssignModal() {
-    // 新增分派任務的 modal
-    (async () => {
-        const teams = await loadTeams();
-        const selectEl = document.getElementById('new-assign-team');
-        selectEl.innerHTML = '<option value="">-- 選擇班組 --</option>' +
-            teams.map(t => `<option value="${t.id}">${t.name || '#' + t.id}</option>`).join('');
-    })();
+async function openAssignModal() {
+    const [teams, machinesRes] = await Promise.all([
+        loadTeams(),
+        apiFetch('GET', '/machines')
+    ]);
+    const machinesData = await machinesRes.json();
+    const machines = machinesData.data || [];
+
+    // 機台選單
+    const machineSelect = document.getElementById('new-assign-machine');
+    machineSelect.innerHTML = '<option value="">-- 選擇機台 --</option>' +
+        machines.map(m => `<option value="${m.machine_id}" data-region="${m.region_id}">${m.machine_name}（${m.region_name}）</option>`).join('');
+
+    // 班組選單
+    const teamSelect = document.getElementById('new-assign-team');
+    teamSelect.innerHTML = '<option value="">-- 選擇班組 --</option>' +
+        teams.map(t => `<option value="${t.teamId}">第 ${t.teamId} 組</option>`).join('');
+
     openModal('modal-new-assign');
 }
 
@@ -310,3 +320,79 @@ async function deleteTask(taskId) {
         showToast('❌ 刪除失敗：' + e.message);
     }
 }
+
+async function openStaffCompleteModal(taskId) {
+    document.getElementById('staff-complete-task-id').textContent = '#' + taskId;
+    document.getElementById('staff-complete-note').value = '';
+    window._completeTaskId = taskId;
+
+    // 載入該機台的庫存項目
+    const task = (window._staffPending || []).find(t => t.refillTaskId === taskId);
+    const container = document.getElementById('staff-complete-items');
+
+    if (task && task.machineNames) {
+        // 打 API 取得機台庫存
+        try {
+            const res = await apiFetch('GET', `/staff/${getCurrentUser().user_id}/machines`);
+            const data = await res.json();
+            const machines = data.data || [];
+            window._staffMachines = machines;
+            const machine = machines.find(m => m.machine_name === task.machineNames);
+            const inventory = machine?.inventory || [];
+
+            if (inventory.length > 0) {
+                container.innerHTML = inventory.map(i => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);padding:10px 14px;border-radius:10px;">
+                        <span style="font-size:13px;font-weight:600;">${i.drink_name}</span>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:12px;color:var(--muted)">實際補貨數量</span>
+                            <input type="number" min="0" value="0" id="complete-qty-${i.drink_name}"
+                                style="width:64px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;text-align:center" />
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div style="color:var(--muted);font-size:13px;">無庫存資料</div>';
+            }
+        } catch (e) {
+            container.innerHTML = '<div style="color:var(--muted);font-size:13px;">載入庫存失敗</div>';
+        }
+    } else {
+        container.innerHTML = '<div style="color:var(--muted);font-size:13px;">無庫存資料</div>';
+    }
+
+    openModal('modal-staff-complete');
+}
+
+async function submitStaffComplete() {
+    const taskId = window._completeTaskId;
+    const task = (window._staffPending || []).find(t => t.refillTaskId === taskId);
+
+    // 收集補貨數量
+    const items = [];
+    const inputs = document.querySelectorAll('[id^="complete-qty-"]');
+    inputs.forEach(input => {
+        const drinkName = input.id.replace('complete-qty-', '');
+        const qty = parseInt(input.value) || 0;
+        // 從 window._staffMachines 找 drink_id
+        const machine = (window._staffMachines || []).find(m => m.machine_name === task?.machineNames);
+        const inv = (machine?.inventory || []).find(i => i.drink_name === drinkName);
+        if (inv) {
+            items.push({ drink_id: inv.drink_id, actual_quantity: qty });
+        }
+    });
+
+    try {
+        const res = await apiFetch('PUT', `/refill-tasks/${taskId}/complete`, {
+            machine_id: task?.machineId || null,
+            items: items
+        });
+        if (!res.ok) throw new Error('API 返回錯誤: ' + res.status);
+        showToast('✅ 任務已回報完成！');
+        closeModal('modal-staff-complete');
+        switchTab('tasks');
+    } catch (e) {
+        showToast('❌ 回報失敗：' + e.message);
+    }
+}
+
