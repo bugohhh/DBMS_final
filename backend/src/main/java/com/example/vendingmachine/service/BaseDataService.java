@@ -31,6 +31,13 @@ public class BaseDataService {
         return regionDao.save(region); 
     }
     
+
+    public Long getRegionIdByName(String name) {
+        Region region = regionDao.findByName(name)
+                .orElseThrow(() -> new RuntimeException("找不到名稱為 '" + name + "' 的區域"));
+        return region.getId();
+    }
+    
     public Region updateRegion(Long id, Region updatedRegion) {
         Region region = regionDao.findById(id).orElseThrow(() -> new RuntimeException("找不到該區域"));
         region.setName(updatedRegion.getName());

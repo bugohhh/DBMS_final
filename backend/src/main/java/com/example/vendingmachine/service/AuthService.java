@@ -57,8 +57,12 @@ public class AuthService {
 
     // 2. 插入 Account（密碼直接存，正式環境應該 hash）
     jdbcTemplate.update(
-        "INSERT INTO Account (user_id, account, password_hash, user_name, user_type) VALUES (?, ?, ?, ?, 'Staff')",
-        userId, account, password, userName);
+        "INSERT INTO Account (user_id, account, password_hash) VALUES (?, ?, ?)",
+        userId, account, password);
+        jdbcTemplate.update(
+        "INSERT INTO User(user_id, user_name, user_type) VALUES (?, ?, 'Staff')", 
+        userId, userName);
+        
 
     // 3. 插入 Staff
     jdbcTemplate.update("INSERT INTO Staff (user_id) VALUES (?)", userId);

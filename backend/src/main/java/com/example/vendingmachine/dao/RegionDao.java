@@ -27,12 +27,10 @@ public class RegionDao {
         }
     };
 
- 
     public List<Region> findAll() {
         String sql = "SELECT * FROM region";
         return jdbcTemplate.query(sql, regionMapper);
     }
-
 
     public Optional<Region> findById(Long id) {
         String sql = "SELECT * FROM region WHERE id = ?";
@@ -40,6 +38,12 @@ public class RegionDao {
         return list.stream().findFirst();
     }
 
+
+    public Optional<Region> findByName(String name) {
+        String sql = "SELECT * FROM region WHERE name = ?";
+        List<Region> list = jdbcTemplate.query(sql, regionMapper, name);
+        return list.stream().findFirst();
+    }
 
     public Region save(Region region) {
         if (region.getId() == null) {
@@ -52,7 +56,6 @@ public class RegionDao {
             return region;
         }
     }
-
 
     public void deleteById(Long id) {
         String sql = "DELETE FROM region WHERE id = ?";
