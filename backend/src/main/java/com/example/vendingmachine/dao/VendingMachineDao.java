@@ -24,7 +24,6 @@ public class VendingMachineDao {
         @Override
         public VendingMachine mapRow(ResultSet rs, int rowNum) throws SQLException {
             VendingMachine machine = new VendingMachine();
-
             machine.setMachineId(rs.getLong("machine_id"));
             machine.setMachineName(rs.getString("machine_name"));
             machine.setRegionId(rs.getLong("region_id"));
@@ -33,12 +32,10 @@ public class VendingMachineDao {
         }
     };
 
-
     public List<VendingMachine> findAll() {
         String sql = "SELECT * FROM VendingMachine";
         return jdbcTemplate.query(sql, machineMapper);
     }
-
 
     public Optional<VendingMachine> findById(Long id) {
         String sql = "SELECT * FROM VendingMachine WHERE machine_id = ?";
@@ -46,6 +43,11 @@ public class VendingMachineDao {
         return list.stream().findFirst();
     }
 
+
+    public List<VendingMachine> findByRegionId(Long regionId) {
+        String sql = "SELECT * FROM VendingMachine WHERE region_id = ?";
+        return jdbcTemplate.query(sql, machineMapper, regionId);
+    }
 
     public VendingMachine save(VendingMachine machine) {
         if (machine.getMachineId() == null) {
@@ -70,11 +72,8 @@ public class VendingMachineDao {
         }
     }
 
-
     public boolean deleteById(Long machineId) {
-        // 先刪該機台的庫存
         jdbcTemplate.update("DELETE FROM Inventory WHERE machine_id = ?", machineId);
-        // 再刪機台
         int deleted = jdbcTemplate.update("DELETE FROM VendingMachine WHERE machine_id = ?", machineId);
         return deleted > 0;
     }
