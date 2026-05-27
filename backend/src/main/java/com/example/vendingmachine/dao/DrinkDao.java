@@ -32,13 +32,29 @@ public class DrinkDao {
 
 
     public List<Drink> findAll() {
-        String sql = "SELECT * FROM drinks";
+        String sql = "SELECT drink_id, drink_name, brand, category, size, status FROM Drink";
         return jdbcTemplate.query(sql, drinkRowMapper);
     }
 
 
+    public List<Drink> findActive() {
+        String sql = "SELECT drink_id, drink_name, brand, category, size, status FROM Drink WHERE status = 'Active'";
+        return jdbcTemplate.query(sql, drinkRowMapper);
+    }
+
+    public List<Drink> findByName(String name) {
+        String sql = """
+                SELECT drink_id, drink_name, brand, category, size, status
+                FROM Drink
+                WHERE LOWER(drink_name) LIKE LOWER(?)
+                ORDER BY drink_name, drink_id
+                """;
+        return jdbcTemplate.query(sql, drinkRowMapper, "%" + name + "%");
+    }
+
+
     public Optional<Drink> findById(Long id) {
-        String sql = "SELECT * FROM drinks WHERE drink_id = ?";
+        String sql = "SELECT drink_id, drink_name, brand, category, size, status FROM Drink WHERE drink_id = ?";
         List<Drink> list = jdbcTemplate.query(sql, drinkRowMapper, id);
         return list.stream().findFirst();
     }
@@ -46,11 +62,11 @@ public class DrinkDao {
 
     public Drink save(Drink drink) {
         if (drink.getDrinkId() == null) {
-            String sql = "INSERT INTO drinks (drink_name, brand, category, size, status) VALUES (?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO Drink (drink_name, brand, category, size, status) VALUES (?, ?, ?, ?, ?)";
             jdbcTemplate.update(sql, drink.getDrinkName(), drink.getBrand(), drink.getCategory(), drink.getSize(), drink.getStatus());
             return drink;
         } else {
-            String sql = "UPDATE drinks SET drink_name = ?, brand = ?, category = ?, size = ?, status = ? WHERE drink_id = ?";
+            String sql = "UPDATE Drink SET drink_name = ?, brand = ?, category = ?, size = ?, status = ? WHERE drink_id = ?";
             jdbcTemplate.update(sql, drink.getDrinkName(), drink.getBrand(), drink.getCategory(), drink.getSize(), drink.getStatus(), drink.getDrinkId());
             return drink;
         }
@@ -58,7 +74,7 @@ public class DrinkDao {
 
 
     public void deleteById(Long id) {
-        String sql = "DELETE FROM drinks WHERE drink_id = ?";
+        String sql = "DELETE FROM Drink WHERE drink_id = ?";
         jdbcTemplate.update(sql, id);
     }
 }

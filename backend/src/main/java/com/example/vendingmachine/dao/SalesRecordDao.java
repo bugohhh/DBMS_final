@@ -78,4 +78,24 @@ public class SalesRecordDao {
                 """;
         return jdbcTemplate.query(sql, salesRecordMapper);
     }
+
+    public List<SalesRecord> findByFilters(Long machineId, Long drinkId) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT sales_id, machine_id, drink_id, quantity, sale_time, record_source
+                FROM SalesRecord
+                WHERE 1 = 1
+                """);
+        java.util.List<Object> params = new java.util.ArrayList<>();
+        if (machineId != null) {
+            sql.append(" AND machine_id = ?");
+            params.add(machineId);
+        }
+        if (drinkId != null) {
+            sql.append(" AND drink_id = ?");
+            params.add(drinkId);
+        }
+        sql.append(" ORDER BY sale_time DESC, sales_id DESC");
+        return jdbcTemplate.query(sql.toString(), salesRecordMapper, params.toArray());
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.example.vendingmachine.dao;
 
+import com.example.vendingmachine.dto.InventoryDetailsDTO;
 import com.example.vendingmachine.dto.PublicInventoryDTO;
 import com.example.vendingmachine.model.Inventory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -137,6 +138,123 @@ public class InventoryDao {
                 ORDER BY quantity ASC, inventory_id
                 """;
         return jdbcTemplate.query(sql, inventoryMapper);
+    }
+
+
+    private InventoryDetailsDTO mapInventoryDetails(ResultSet rs) throws SQLException {
+        InventoryDetailsDTO dto = new InventoryDetailsDTO();
+        dto.setInventoryId(rs.getLong("inventory_id"));
+        dto.setMachineId(rs.getLong("machine_id"));
+        dto.setDrinkId(rs.getLong("drink_id"));
+        dto.setQuantity(rs.getInt("quantity"));
+        dto.setPrice(rs.getBigDecimal("price"));
+        dto.setThreshold(rs.getInt("threshold"));
+        dto.setCapacity(rs.getInt("capacity"));
+        dto.setDrinkName(rs.getString("drink_name"));
+        dto.setBrand(rs.getString("brand"));
+        dto.setCategory(rs.getString("category"));
+        dto.setSize(rs.getString("size"));
+        try { dto.setMachineName(rs.getString("machine_name")); } catch (SQLException ignored) {}
+        try { dto.setLocation(rs.getString("location")); } catch (SQLException ignored) {}
+        dto.setAvailable(dto.getQuantity() != null && dto.getQuantity() > 0);
+        return dto;
+    }
+
+    public Optional<Inventory> findByMachineIdAndDrinkId(Long machineId, Long drinkId) {
+        String sql = """
+                SELECT inventory_id, machine_id, drink_id, quantity, price, threshold, capacity
+                FROM Inventory
+                WHERE machine_id = ? AND drink_id = ?
+                """;
+        List<Inventory> result = jdbcTemplate.query(sql, inventoryMapper, machineId, drinkId);
+        return result.stream().findFirst();
+    }
+
+    public List<InventoryDetailsDTO> findDetailsByMachineId(Long machineId) {
+        String sql = """
+                SELECT i.inventory_id, i.machine_id, i.drink_id, i.quantity, i.price, i.threshold, i.capacity,
+                       d.drink_name, d.brand, d.category, d.size
+                FROM Inventory i
+                JOIN Drink d ON i.drink_id = d.drink_id
+                WHERE i.machine_id = ?
+                ORDER BY d.drink_name, i.inventory_id
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> mapInventoryDetails(rs), machineId);
+    }
+
+    public List<InventoryDetailsDTO> findLowStockDetails() {
+        String sql = """
+                SELECT i.inventory_id, i.machine_id, i.drink_id, i.quantity, i.price, i.threshold, i.capacity,
+                       d.drink_name, d.brand, d.category, d.size,
+                       vm.machine_name, vm.location
+                FROM Inventory i
+                JOIN Drink d ON i.drink_id = d.drink_id
+                JOIN VendingMachine vm ON i.machine_id = vm.machine_id
+                WHERE i.threshold IS NOT NULL AND i.quantity <= i.threshold
+                ORDER BY i.quantity ASC, vm.machine_name, d.drink_name
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> mapInventoryDetails(rs));
+    }
+
+    public List<InventoryDetailsDTO> findPublicDetailsByMachineId(Long machineId) {
+        String sql = """
+                SELECT i.inventory_id, i.machine_id, i.drink_id, i.quantity, i.price, i.threshold, i.capacity,
+                       d.drink_name, d.brand, d.category, d.size
+                FROM Inventory i
+                JOIN Drink d ON i.drink_id = d.drink_id
+                WHERE i.machine_id = ?
+                ORDER BY d.drink_name, i.inventory_id
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> mapInventoryDetails(rs), machineId);
+    }
+
+    public List<InventoryDetailsDTO> searchInventory(List<String> keywords) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT i.inventory_id, i.machine_id, i.drink_id, i.quantity, i.price, i.threshold, i.capacity,
+                       d.drink_name, d.brand, d.category, d.size,
+                       vm.machine_name, vm.location
+                FROM Inventory i
+                JOIN Drink d ON i.drink_id = d.drink_id
+                JOIN VendingMachine vm ON i.machine_id = vm.machine_id
+                WHERE 1 = 1
+                """);
+        java.util.List<Object> params = new java.util.ArrayList<>();
+        appendKeywordConditions(sql, params, keywords);
+        sql.append(" ORDER BY vm.machine_name, d.drink_name");
+        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> mapInventoryDetails(rs), params.toArray());
+    }
+
+    public List<InventoryDetailsDTO> searchInventoryByRegion(Long regionId, List<String> keywords) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT i.inventory_id, i.machine_id, i.drink_id, i.quantity, i.price, i.threshold, i.capacity,
+                       d.drink_name, d.brand, d.category, d.size,
+                       vm.machine_name, vm.location
+                FROM Inventory i
+                JOIN Drink d ON i.drink_id = d.drink_id
+                JOIN VendingMachine vm ON i.machine_id = vm.machine_id
+                WHERE vm.region_id = ?
+                """);
+        java.util.List<Object> params = new java.util.ArrayList<>();
+        params.add(regionId);
+        appendKeywordConditions(sql, params, keywords);
+        sql.append(" ORDER BY vm.machine_name, d.drink_name");
+        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> mapInventoryDetails(rs), params.toArray());
+    }
+
+    private void appendKeywordConditions(StringBuilder sql, java.util.List<Object> params, List<String> keywords) {
+        for (String keyword : keywords) {
+            sql.append("""
+                    AND (LOWER(d.drink_name) LIKE LOWER(?)
+                         OR LOWER(d.brand) LIKE LOWER(?)
+                         OR LOWER(d.category) LIKE LOWER(?)
+                         OR LOWER(d.size) LIKE LOWER(?))
+                    """);
+            String like = "%" + keyword + "%";
+            params.add(like);
+            params.add(like);
+            params.add(like);
+            params.add(like);
+        }
     }
 
     public List<PublicInventoryDTO> findByMachineIdWithDrinkName(Long machineId) {

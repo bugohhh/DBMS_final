@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -38,6 +39,8 @@ public class SalesRecordController {
 
     @GetMapping
     public ApiResponse<List<SalesRecord>> getSalesRecords(
+            @RequestParam(value = "machine_id", required = false) Long machineId,
+            @RequestParam(value = "drink_id", required = false) Long drinkId,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
         String token = extractBearerToken(authorization);
@@ -45,7 +48,7 @@ public class SalesRecordController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only managers can read sales records");
         }
 
-        return ApiResponse.success("Sales record list", salesRecordService.getSalesRecords());
+        return ApiResponse.success("Sales record list", salesRecordService.getSalesRecords(machineId, drinkId));
     }
 
     private void requireValidToken(String authorization) {

@@ -39,6 +39,13 @@ public class SalesRecordService {
         return salesRecordDao.findAll();
     }
 
+    public List<SalesRecord> getSalesRecords(Long machineId, Long drinkId) {
+        if (machineId == null && drinkId == null) {
+            return getSalesRecords();
+        }
+        return salesRecordDao.findByFilters(machineId, drinkId);
+    }
+
     private void validateSalesRecord(SalesRecord salesRecord) {
         if (salesRecord == null
                 || salesRecord.getMachineId() == null
