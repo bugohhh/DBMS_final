@@ -21,14 +21,12 @@ async function renderTasks(area) {
         tasks = MOCK.tasks;
     } else {
         try {
-            // Manager 看全部；Staff 只看自己的
             const path = isManager
                 ? '/refill-tasks'
                 : `/staff/${user.user_id}/refill-tasks`;
             const res = await apiFetch('GET', path);
             if (!res || !res.ok) throw new Error(`API 返回錯誤: ${res?.status || 'unknown'}`);
             const data = await res.json();
-            console.log('GET ' + path + ' 返回數據:', data);
             if (data.success && Array.isArray(data.data)) {
                 tasks = data.data;
             } else if (Array.isArray(data)) {
@@ -45,6 +43,14 @@ async function renderTasks(area) {
         }
     }
 
+    // Staff 走新版頁面
+    if (!isManager) {
+        renderStaffTasksPage(area, tasks);
+        return;
+    }
+
+    // Manager 原本頁面
+    const myTeamId = !isManager && tasks.length > 0 ? tasks[0].teamId : null;
     area.innerHTML = `
         <div class="page-header">
             <h2>補貨任務管理</h2>
@@ -70,20 +76,92 @@ async function renderTasks(area) {
                         <td style="font-size:12px">${t.taskType}</td>
                         <td>${taskStatusBadge(t.status)}</td>
                         <td>
-                            ${isManager && t.status === 'Pending'
+                            ${t.status === 'Pending'
                                 ? `<button class="btn btn-sm btn-primary" onclick="openAssignTaskModal(${t.refillTaskId})">分派</button>
-                                <button class="btn btn-sm btn-ghost" onclick="openRestockModal(${t.refillTaskId})">更新</button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteTask(${t.refillTaskId})">刪除</button>`
-                                : !isManager && t.status !== 'Completed'
-                                    ? `<button class="btn btn-sm btn-primary" onclick="completeTask(${t.refillTaskId})">✓ 標記完成</button>`
-                                    : isManager
-                                        ? `<button class="btn btn-sm btn-danger" onclick="deleteTask(${t.refillTaskId})">刪除</button>`
-                                        : '<span style="color:var(--muted);font-size:13px">—</span>'}
+                                   <button class="btn btn-sm btn-ghost" onclick="openRestockModal(${t.refillTaskId})">更新</button>
+                                   <button class="btn btn-sm btn-danger" onclick="deleteTask(${t.refillTaskId})">刪除</button>`
+                                : `<button class="btn btn-sm btn-danger" onclick="deleteTask(${t.refillTaskId})">刪除</button>`}
                         </td>
                     </tr>`).join('')}
                 </tbody>
             </table>
         </div>`;
+}
+
+function renderStaffTasksPage(area, tasks) {
+    const myTeamId = tasks.length > 0 ? tasks[0].teamId : null;
+    const pending = tasks.filter(t => t.status !== 'Completed');
+    const completed = tasks.filter(t => t.status === 'Completed');
+
+    window._staffPending = pending;
+    window._staffCompleted = completed;
+
+    area.innerHTML = `
+        <div class="page-header">
+            <h2>補貨任務管理</h2>
+            <p>依地理位置自動分組排程</p>
+            ${myTeamId ? `<p style="color:var(--accent);font-weight:700;margin-top:6px">👤 您目前所屬班組：第 ${myTeamId} 組</p>` : ''}
+        </div>
+        <div style="display:flex;gap:12px;border-bottom:1px solid var(--border);margin-bottom:20px">
+            <button id="staff-tab-pending" onclick="switchStaffTab('pending')"
+                style="background:none;border:none;padding:8px 16px;cursor:pointer;color:var(--text);font-weight:500;border-bottom:2px solid var(--accent);font-family:inherit;">
+                待處理任務（${pending.length}）
+            </button>
+            <button id="staff-tab-completed" onclick="switchStaffTab('completed')"
+                style="background:none;border:none;padding:8px 16px;cursor:pointer;color:var(--muted);font-weight:500;font-family:inherit;">
+                已完成任務（${completed.length}）
+            </button>
+        </div>
+        <div id="staff-tasks-container"></div>`;
+
+    switchStaffTab('pending');
+}
+
+function switchStaffTab(type) {
+    const tasks = type === 'pending' ? (window._staffPending || []) : (window._staffCompleted || []);
+
+    document.getElementById('staff-tab-pending').style.borderBottom = type === 'pending' ? '2px solid var(--accent)' : 'none';
+    document.getElementById('staff-tab-pending').style.color = type === 'pending' ? 'var(--text)' : 'var(--muted)';
+    document.getElementById('staff-tab-completed').style.borderBottom = type === 'completed' ? '2px solid var(--accent)' : 'none';
+    document.getElementById('staff-tab-completed').style.color = type === 'completed' ? 'var(--text)' : 'var(--muted)';
+
+    const container = document.getElementById('staff-tasks-container');
+    if (!container) return;
+
+    if (tasks.length === 0) {
+        container.innerHTML = `
+            <div class="card" style="text-align:center;padding:48px;">
+                <i class="fas fa-check-circle" style="font-size:48px;color:var(--accent);margin-bottom:16px;display:block"></i>
+                <p>${type === 'pending' ? '目前沒有待處理的補貨任務' : '尚無已完成任務紀錄'}</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = tasks.map(t => `
+        <div class="card" style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                <div>
+                    <h3 style="font-size:16px;font-weight:700;">📦 任務 #${t.refillTaskId}</h3>
+                    <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+                        <i class="fas fa-map-marker-alt"></i> ${t.regionName || '#' + t.regionId}
+                        ${t.machineNames ? `｜${t.machineNames}` : ''}
+                    </div>
+                </div>
+                ${taskStatusBadge(t.status)}
+            </div>
+            <div style="background:var(--surface2);border-radius:12px;padding:12px;margin:12px 0;font-size:13px;">
+                <span style="color:var(--muted)">任務類型：</span>${t.taskType}
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);">
+                <span><i class="far fa-calendar-alt"></i> ${t.taskDate}</span>
+                ${type === 'pending'
+                    ? `<button class="btn btn-primary" onclick="completeTask(${t.refillTaskId})" style="padding:6px 16px;font-size:12px;">
+                           <i class="fas fa-check"></i> 回報完成
+                       </button>`
+                    : '<span style="color:var(--accent)">✓ 已完成</span>'}
+            </div>
+        </div>
+    `).join('');
 }
 
 /**

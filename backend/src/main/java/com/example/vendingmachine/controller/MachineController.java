@@ -6,8 +6,10 @@ import com.example.vendingmachine.dto.MachineDTO;
 import com.example.vendingmachine.model.VendingMachine; 
 import com.example.vendingmachine.service.MachineAndDrinkService; 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -119,6 +121,24 @@ public class MachineController {
         machineAndDrinkService.deleteMachine(machineId);
         return ResponseEntity.noContent().build();
     }
-    
-    
+
+    @PutMapping("/machines/{machine_id}/status")
+    public ApiResponse<Void> updateMachineStatus(
+                @PathVariable("machine_id") Long machineId,
+                @RequestBody Map<String, String> request) {
+            String status = request.get("status");
+            if (status == null || status.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status is required");
+            }
+            machineAndDrinkService.updateMachineStatus(machineId, status);
+            return ApiResponse.success("機台狀態已更新", null);
+    }    
+
+    @GetMapping("/staff/{user_id}/machines")
+    public ApiResponse<List<MachineDTO>> getMachinesByStaffId(
+            @PathVariable("user_id") Long userId) {
+        List<MachineDTO> machines = machineAndDrinkService.getMachinesByStaffUserId(userId);
+        return ApiResponse.success("成功取得機台資料", machines);
+    }
+       
 }
