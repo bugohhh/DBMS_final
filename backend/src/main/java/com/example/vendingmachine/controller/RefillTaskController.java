@@ -3,8 +3,7 @@ package com.example.vendingmachine.controller;
 import com.example.vendingmachine.dto.ApiResponse;
 import com.example.vendingmachine.model.RefillDetail;
 import com.example.vendingmachine.model.RefillTask;
-import com.example.vendingmachine.service.AuthService;
-import com.example.vendingmachine.service.RefillTaskService;
+import com.example.vendingmachine.service.RefillTaskService; // 💡 已移除沒用到的 AuthService 引入
 
 import org.springframework.web.bind.annotation.*;
 
@@ -16,11 +15,9 @@ import java.util.Map;
 public class RefillTaskController {
 
     private final RefillTaskService refillTaskService;
-    private final AuthService authService;
 
-    public RefillTaskController(RefillTaskService refillTaskService, AuthService authService) {
+    public RefillTaskController(RefillTaskService refillTaskService) {
         this.refillTaskService = refillTaskService;
-        this.authService = authService;
     }
 
     @PostMapping("/refill-tasks")
@@ -53,11 +50,12 @@ public class RefillTaskController {
 
     @GetMapping("/staff/{staff_id}/refill-tasks")
     public ApiResponse<List<RefillTask>> getRefillTasksByStaffId(@PathVariable("staff_id") Long staffId,
-                                                                @RequestHeader(value = "Authorization", required = false) String authorization) {
+                                                                 @RequestHeader(value = "Authorization", required = false) String authorization) {
         // requireValidToken(authorization);
         return ApiResponse.success("Staff refill tasks", refillTaskService.getRefillTasksByStaffId(staffId));
     }
 
+    @SuppressWarnings("unchecked")
     @PutMapping("/refill-tasks/{refilltask_id}/complete")
     public ApiResponse<RefillTask> completeRefillTask(
             @PathVariable("refilltask_id") Long refillTaskId,
@@ -90,9 +88,9 @@ public class RefillTaskController {
     }
 
     @DeleteMapping("/refill-tasks/{refilltask_id}")
-    public ApiResponse<Void> deleteRefillTask(@PathVariable("refilltask_id") Long refillTaskId,@RequestHeader(value = "Authorization", required = false) String authorization) {
+    public ApiResponse<Void> deleteRefillTask(@PathVariable("refilltask_id") Long refillTaskId,
+                                             @RequestHeader(value = "Authorization", required = false) String authorization) {
         refillTaskService.deleteRefillTask(refillTaskId);
         return ApiResponse.success("Refill task deleted", null);
-        }
-
+    }
 }
