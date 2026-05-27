@@ -1,8 +1,6 @@
 package com.example.vendingmachine.service;
 
-import com.example.vendingmachine.dao.InventoryDao;
 import com.example.vendingmachine.dao.RefillTaskDao;
-import com.example.vendingmachine.model.Inventory;
 import com.example.vendingmachine.model.RefillTask;
 import com.example.vendingmachine.model.RefillDetail;
 

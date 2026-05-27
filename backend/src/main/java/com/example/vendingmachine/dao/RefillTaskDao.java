@@ -8,7 +8,6 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
