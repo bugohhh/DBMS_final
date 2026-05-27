@@ -3,9 +3,11 @@ package com.example.vendingmachine.service;
 import com.example.vendingmachine.dao.RegionDao;
 import com.example.vendingmachine.dao.TeamDao;
 import com.example.vendingmachine.dao.StaffTeamDao;
+import com.example.vendingmachine.dao.VendingMachineDao; // ⭐ 1. 引入機台 Dao
 import com.example.vendingmachine.model.Region;
 import com.example.vendingmachine.model.Team;
 import com.example.vendingmachine.model.StaffTeam;
+import com.example.vendingmachine.model.VendingMachine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -22,6 +24,9 @@ public class BaseDataService {
     @Autowired 
     private StaffTeamDao staffTeamDao;
 
+    @Autowired
+    private VendingMachineDao vendingMachineDao; // ⭐ 2. 注入機台 Dao
+
     // === Region 功能 ===
     public List<Region> getAllRegions() { 
         return regionDao.findAll(); 
@@ -31,7 +36,6 @@ public class BaseDataService {
         return regionDao.save(region); 
     }
     
-
     public Long getRegionIdByName(String name) {
         Region region = regionDao.findByName(name)
                 .orElseThrow(() -> new RuntimeException("找不到名稱為 '" + name + "' 的區域"));
@@ -45,7 +49,13 @@ public class BaseDataService {
         return regionDao.save(region);
     }
     
+
     public void deleteRegion(Long id) { 
+        List<VendingMachine> machinesInRegion = vendingMachineDao.findByRegionId(id);
+        if (!machinesInRegion.isEmpty()) {
+            throw new RuntimeException("無法刪除該區域！該區域內目前仍有 " + machinesInRegion.size() + " 台販賣機在運作中。");
+        }
+        
         regionDao.deleteById(id); 
     }
 
