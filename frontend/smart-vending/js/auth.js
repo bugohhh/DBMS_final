@@ -98,14 +98,37 @@ async function doLogin() {
             body: JSON.stringify({ account, password }),
         });
         const data = await res.json();
+        
         if (!data.success) {
             err.textContent = data.message || '帳號或密碼錯誤'; err.style.display = 'block'; return;
         }
+
+        // 1. 取得後端傳過來的真實身分（例如: 'Manager' 或 'Staff'）
+        const realType = data.data.user_type; 
+        // 2. 取得目前使用者在畫面上點選的頁籤角色（'admin' 代表系統管理員，'staff' 代表補貨人員）
+        const chosenRole = selectedLoginRole; 
+
+        // Staff 想從「系統管理員（admin）」入口溜進去
+        if (chosenRole === 'admin' && realType === 'Staff') {
+            err.textContent = '❌ 錯誤：普通員工禁止從管理員入口登入！';
+            err.style.display = 'block';
+            return; // ⛔ 攔截！直接在這裡結束，絕對不會進入 enterSystem()，畫面就不會切換
+        }
+        
+        // Manager 想從「補貨人員（staff）」入口登入
+        if (chosenRole === 'staff' && realType === 'Manager') {
+            err.textContent = '❌ 錯誤：管理員請從系統管理員入口登入！';
+            err.style.display = 'block';
+            return; // ⛔ 攔截！直接在這裡結束，絕對不會進入 enterSystem()，畫面就不會切換
+        }
+        
+        // 只有當兩邊完全對齊時，才會執行下面原本的儲存憑證與進入畫面
         setAuth(
             { access_token: data.data.access_token, refresh_token: data.data.refresh_token },
             { user_id: data.data.user_id, user_name: data.data.user_name, user_type: data.data.user_type }
         );
-        enterSystem();
+        enterSystem(); // 這裡才會放行，去執行原汁原味的 enterSystem()
+
     } catch (e) {
         err.textContent = '無法連線至伺服器，請確認後端是否啟動'; err.style.display = 'block';
     }
@@ -209,7 +232,7 @@ async function loadConsumerMachine(machineId, machineName) {
  * 進入系統（管理員模式）
  */
 function enterSystem() {
-    document.getElementById('login-screen').style.display = 'none';
+     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-view').style.display = 'block';
     const user = getCurrentUser();
     document.getElementById('role-badge').textContent = user.user_name + ' · ' + user.user_type;
@@ -224,13 +247,34 @@ function enterSystem() {
 /**
  * POST /auth/logout — 登出系統
  */
+/**
+ * 補齊後端安全報廢卡片機制
+ */
 async function logout() {
-    const user = getCurrentUser();
-    if (!USE_MOCK && isAuthenticated()) {
+    if (!USE_MOCK) {
         try {
-            await apiFetch('POST', '/auth/logout', { refresh_token: refreshToken });
-        } catch (e) {}
+            // 👈 關鍵修正：因為 /auth/logout 需要嗶卡驗證，我們直接用最標準的 fetch 發送
+            // 並強制把我們手上的 accessToken 黏在 Headers 上！
+            const headers = { 
+                'Content-Type': 'application/json'
+            };
+            if (accessToken) {
+                headers['Authorization'] = `Bearer ${accessToken}`;
+            }
+
+            await fetch(BASE_URL + '/auth/logout', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({ refresh_token: refreshToken }) // 👈 這裡送 refresh_token 給後端註銷
+            });
+            
+            console.log("後端資料庫已成功將此 Token 報廢！");
+        } catch (e) {
+            console.error("呼叫後端註銷失敗，但前端依然強行下線", e);
+        }
     }
+    
+    // 徹底清除前端瀏覽器的記憶、重刷網頁，就會自動跳回登入畫面！
     clearAuth();
     location.reload();
 }
