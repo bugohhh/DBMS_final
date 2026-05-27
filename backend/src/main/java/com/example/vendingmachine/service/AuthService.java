@@ -124,4 +124,77 @@ public class AuthService {
             return false;
         }
     }
+
+
+    // 1. 登出大腦：去資料庫把這張通行證塗黑（撤銷）
+    public void logoutSession(String refreshToken) {
+        String sql = "UPDATE `LoginSession` SET `revoked_at` = NOW() WHERE `refresh_token_hash` = ?";
+        jdbcTemplate.update(sql, refreshToken);
+    }
+
+    // 2. 查自己大腦：拿 Token 當鑰匙，跨表 JOIN 查出我是誰
+    public Map<String, Object> getCurrentUser(String token) {
+        String sql = """
+                SELECT u.user_id, u.user_name, u.user_type
+                FROM `LoginSession` ls
+                JOIN `User` u ON ls.user_id = u.user_id
+                WHERE ls.refresh_token_hash = ? 
+                  AND ls.revoked_at IS NULL 
+                  AND (ls.expires_at IS NULL OR ls.expires_at > NOW())
+                """;
+        try {
+            return jdbcTemplate.queryForMap(sql, token);
+        } catch (DataAccessException e) {
+            return null; // 查不到或過期了，就回傳 null
+        }
+    }
+
+    // 3. 撈名冊大腦：跑簡單的 SELECT 撈出全公司 User 列表
+    public java.util.List<Map<String, Object>> fetchAllUsers() {
+        String sql = "SELECT `user_id`, `user_name`, `user_type` FROM `User`";
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    // 4. 修改密碼大腦：先比對舊密碼，對了才改新密碼
+    public boolean updateUserPassword(int userId, String oldPassword, String newPassword) {
+        // 先查舊密碼對不對
+        String checkSql = "SELECT COUNT(*) FROM `Account` WHERE `user_id` = ? AND `password_hash` = ?";
+        Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, userId, oldPassword);
+        
+        if (count != null && count > 0) {
+            // 對了，更新成新密碼
+            String updateSql = "UPDATE `Account` SET `password_hash` = ? WHERE `user_id` = ?";
+            jdbcTemplate.update(updateSql, newPassword, userId);
+            return true;
+        }
+        return false; // 舊密碼不對，回傳失敗
+    }
+
+    // 5. 管理者強制改密碼大腦
+    public void forceResetPassword(int userId, String newPassword) {
+        String sql = "UPDATE `Account` SET `password_hash` = ? WHERE `user_id` = ?";
+        jdbcTemplate.update(sql, newPassword, userId);
+    }
+
+    // 6. 查單一使用者大腦
+    public Map<String, Object> fetchUserById(int userId) {
+        String sql = "SELECT `user_id`, `user_name`, `user_type` FROM `User` WHERE `user_id` = ?";
+        try {
+            return jdbcTemplate.queryForMap(sql, userId);
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+
+    // 7. 修改使用者姓名大腦
+    public void modifyUserName(int userId, String newName) {
+        String sql = "UPDATE `User` SET `user_name` = ? WHERE `user_id` = ?";
+        jdbcTemplate.update(sql, newName, userId);
+    }
+
+    // 8. 強制停用（刪除帳號）大腦：把帳號從 Account 刪掉，讓他徹底失去登入門票
+    public void deleteAccountOnly(int userId) {
+        String sql = "DELETE FROM `Account` WHERE `user_id` = ?";
+        jdbcTemplate.update(sql, userId);
+    }
 }
