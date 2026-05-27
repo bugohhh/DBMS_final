@@ -20,34 +20,35 @@ public class TeamDao {
         @Override
         public Team mapRow(ResultSet rs, int rowNum) throws SQLException {
             Team team = new Team();
-            team.setId(rs.getLong("id"));
-            team.setName(rs.getString("name"));
+            team.setTeamId(rs.getLong("team_id"));
+            team.setTeamName(rs.getString("team_name"));
             return team;
         }
     };
 
  
     public List<Team> findAll() {
-        String sql = "SELECT * FROM team";
+        String sql = "SELECT team_id, team_name FROM team";
         return jdbcTemplate.query(sql, teamMapper);
     }
 
 
     public Optional<Team> findById(Long id) {
-        String sql = "SELECT * FROM team WHERE id = ?";
+        String sql = "SELECT team_id, team_name FROM team WHERE team_id = ?";
         List<Team> list = jdbcTemplate.query(sql, teamMapper, id);
         return list.stream().findFirst();
     }
 
 
     public Team save(Team team) {
-        if (team.getId() == null) {
-            String sql = "INSERT INTO team (name) VALUES (?)";
-            jdbcTemplate.update(sql, team.getName());
+        if (team.getTeamId() == null) {
+            String sql = "INSERT INTO team (team_name) VALUES (?)";
+            jdbcTemplate.update(sql, team.getTeamName());
+
             return team;
         } else {
-            String sql = "UPDATE team SET name = ? WHERE id = ?";
-            jdbcTemplate.update(sql, team.getName(), team.getId());
+            String sql = "UPDATE team SET team_name = ? WHERE team_id = ?";
+            jdbcTemplate.update(sql, team.getTeamName(), team.getTeamId());
             return team;
         }
     }

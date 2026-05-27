@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧販賣機管理平台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="login-screen">
+    <div class="login-card">
+        <div class="login-logo">🤖</div>
+        <h1>Smart Vending</h1>
+        <p>智慧販賣機管理平台</p>
+
+        <div class="role-tabs" id="role-tabs">
+            <button class="role-tab active" onclick="selectRole('admin', this)">系統管理員</button>
+            <button class="role-tab" onclick="selectRole('staff', this)">補貨人員</button>
+        </div>
+
+        <div id="login-form">
+            <div class="form-group">
+                <label>帳號</label>
+                <input type="text" id="inp-id" placeholder="輸入員工編號" />
+            </div>
+            <div class="form-group">
+                <label>密碼</label>
+                <input type="password" id="inp-pw" placeholder="輸入密碼" onkeydown="if(event.key==='Enter')doLogin()" />
+            </div>
+            <p class="error-msg" id="login-err">帳號或密碼錯誤，請重試</p>
+            <button class="btn-login" onclick="doLogin()">登入系統</button>
+            <div id="register-link" style="text-align:center;margin-top:12px;display:none">
+                 <button onclick="toggleRegister(true)" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;">還沒有帳號？點此註冊</button>
+            </div>
+        </div>
+        <div id="register-form" style="display:none">
+             <div class="form-group">
+                <label>姓名</label>
+                <input type="text" id="inp-reg-name" placeholder="輸入真實姓名" />
+            </div>
+            <div class="form-group">
+                <label>帳號</label>
+                <input type="text" id="inp-reg-account" placeholder="設定登入帳號" />
+            </div>
+            <div class="form-group">
+                <label>密碼</label>
+                <input type="password" id="inp-reg-pw" placeholder="設定密碼" />
+            </div>
+            <p class="error-msg" id="reg-err"></p>
+            <button class="btn-login" onclick="doRegister()">註冊帳號</button>
+            <button onclick="toggleRegister(false)" style="width:100%;margin-top:8px;padding:10px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-family:inherit;">← 返回登入</button>
+        </div>
+        <div class="divider">── 或 ──</div>
+        <button class="btn-consumer" onclick="loginConsumer()">
+            <i class="fas fa-user mr-1"></i> 消費者模式（免登入）
+        </button>
+    </div>
+</div>
+
+<!-- ═══════════════ ADMIN ═══════════════ -->
+<div id="admin-view">
+    <aside>
+        <div class="sidebar-header">
+            <h2>⚡ Smart Vending</h2>
+            <span class="badge" id="role-badge"></span>
+        </div>
+        <nav>
+            <button class="nav-item active" id="nav-dashboard" onclick="switchTab('dashboard')">
+                <i class="fas fa-home"></i> 營運概覽
+            </button>
+            <button class="nav-item" id="nav-machines" onclick="switchTab('machines')">
+                <i class="fas fa-box-open"></i> 機台管理
+            </button>
+            <button class="nav-item" id="nav-tasks" onclick="switchTab('tasks')">
+                <i class="fas fa-truck-loading"></i> 補貨任務
+            </button>
+            <button class="nav-item" id="nav-sales" onclick="switchTab('sales')">
+                <i class="fas fa-chart-pie"></i> 銷售分析
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="btn-logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> 登出
+            </button>
+        </div>
+    </aside>
+
+    <main id="main-content"></main>
+</div>
+
+<!-- ═══════════════ CONSUMER ═══════════════ -->
+<div id="consumer-view" style="display:none; min-height:100vh; background:linear-gradient(135deg,#1a1d27,#0f1117); align-items:center; justify-content:center; flex-direction:column; gap:16px;">
+    <!-- 機台選擇列 -->
+    <div id="machine-selector" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:400px;padding:0 16px;"></div>
+    <!-- 手機框 -->
+    <div class="phone-frame">
+        <div class="phone-top">
+            <div class="phone-top-nav">
+                <button onclick="logout()" style="background:rgba(255,255,255,.15);border:none;color:#fff;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;">← 返回</button>
+                <span style="font-size:11px;opacity:.6;font-weight:700;text-transform:uppercase;letter-spacing:.1em;">附近販賣機</span>
+                <div style="width:60px"></div>
+            </div>
+            <h3 id="consumer-machine-name">載入中...</h3>
+            <p id="consumer-machine-id">機台編號: — </p>
+        </div>
+        <div class="phone-body">
+            <p style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;">目前庫存狀態</p>
+            <div id="consumer-inventory">
+                <div style="text-align:center;color:var(--muted);padding:20px">載入中...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ MODAL: 補貨完成 ═══════════════ -->
+<div class="modal-backdrop" id="modal-restock">
+    <div class="modal">
+        <h3>✅ 更新補貨進度</h3>
+        <div class="form-group">
+            <label>任務編號</label>
+            <input type="text" id="modal-task-id" readonly style="background:var(--bg);color:var(--muted);" />
+        </div>
+        <div class="form-group">
+            <label>實際補貨數量（可樂）</label>
+            <input type="number" id="modal-qty-cola" value="20" />
+        </div>
+        <div class="form-group">
+            <label>實際補貨數量（紅茶）</label>
+            <input type="number" id="modal-qty-tea" value="15" />
+        </div>
+        <div class="form-group">
+            <label>備註</label>
+            <input type="text" id="modal-note" placeholder="選填，例如：機台外觀破損" />
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-restock')">取消</button>
+            <button class="btn btn-primary" onclick="submitRestock()">確認送出</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ MODAL: 分派補貨任務 ═══════════════ -->
+<div class="modal-backdrop" id="modal-assign-task">
+    <div class="modal">
+        <h3>🚛 分派補貨任務</h3>
+        <div class="form-group">
+            <label>任務編號</label>
+            <div style="color:var(--muted);font-family:var(--mono);font-size:14px;padding:8px;background:var(--surface2);border-radius:8px;" id="assign-task-id"></div>
+        </div>
+        <div class="form-group">
+            <label>選擇班組</label>
+            <select id="assign-team-select" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);">
+                <option value="">-- 載入中... --</option>
+            </select>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-assign-task')">取消</button>
+            <button class="btn btn-primary" onclick="submitAssignTask()">確認分派</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ MODAL: 新增分派任務 ═══════════════ -->
+<div class="modal-backdrop" id="modal-new-assign">
+    <div class="modal">
+        <h3>➕ 新增分派任務</h3>
+        <div class="form-group">
+            <label>地區</label>
+            <select id="new-assign-region" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);">
+                <option value="">-- 選擇地區 --</option>
+                <option value="2">文山區</option>
+                <option value="3">信義區</option>
+                <option value="4">大同區</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>班組</label>
+            <select id="new-assign-team" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);">
+                <option value="">-- 選擇班組 --</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>任務類型</label>
+            <input type="text" id="new-assign-type" placeholder="例：Regular Refill" value="Regular Refill" />
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-new-assign')">取消</button>
+            <button class="btn btn-primary" onclick="submitNewAssign()">確認新增</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ MODAL: 新增機台 ═══════════════ -->
+<div class="modal-backdrop" id="modal-add-machine">
+    <div class="modal" style="width:560px">
+        <h3>➕ 新增販賣機台</h3>
+        <div class="form-group">
+            <label>機台名稱</label>
+            <input type="text" id="new-vm-name" placeholder="例：NCCU 法學院 B1" />
+        </div>
+        <div class="form-group">
+            <label>地區</label>
+            <input type="text" id="new-vm-area" placeholder="例：文山區" />
+        </div>
+        <div class="form-group">
+            <label>位置描述</label>
+            <input type="text" id="new-vm-location" placeholder="例：法學院一樓走廊" />
+        </div>
+        <div class="form-group">
+            <label>初始庫存設定</label>
+            <div id="new-vm-inventory" style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+                <div style="color:var(--muted);font-size:13px">載入飲料清單...</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-add-machine')">取消</button>
+            <button class="btn btn-primary" onclick="submitAddMachine()">新增</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ TOAST ═══════════════ -->
+<div id="toast"></div>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/machines.js"></script>
+<script src="js/tasks.js"></script>
+<script src="js/sales.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

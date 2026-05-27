@@ -1,13 +1,20 @@
 package com.example.vendingmachine.model;
 
 public class Team {
+    private Long teamId;
+    private String teamName;
+    private String teamStatus;
+    private Long regionId;
 
-    private Long id;
-    private String name;
+    public Long getTeamId() { return teamId; }
+    public void setTeamId(Long teamId) { this.teamId = teamId; }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public String getTeamName() { return teamName; }
+    public void setTeamName(String teamName) { this.teamName = teamName; }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getTeamStatus() { return teamStatus; }
+    public void setTeamStatus(String teamStatus) { this.teamStatus = teamStatus; }
+
+    public Long getRegionId() { return regionId; }
+    public void setRegionId(Long regionId) { this.regionId = regionId; }
 }

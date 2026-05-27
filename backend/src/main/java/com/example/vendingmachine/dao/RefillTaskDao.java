@@ -1,10 +1,8 @@
 package com.example.vendingmachine.dao;
 
-import com.example.vendingmachine.model.Inventory;
-import com.example.vendingmachine.model.RefillTask;
 import com.example.vendingmachine.model.RefillDetail;
+import com.example.vendingmachine.model.RefillTask;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -32,57 +30,77 @@ public class RefillTaskDao {
         @Override
         public RefillTask mapRow(ResultSet rs, int rowNum) throws SQLException {
             RefillTask task = new RefillTask();
-            task.setRefillTaskId(rs.getLong("refill_task_id"));
+            // DB uses `refilltask_id` (no underscore)
+            task.setRefillTaskId(rs.getLong("refilltask_id"));
             task.setTeamId(rs.getLong("team_id"));
             task.setRegionId(rs.getLong("region_id"));
-            task.setTaskDate(rs.getDate("task_date").toLocalDate());
+            task.setRegionName(rs.getString("region_name"));
+            task.setMachineId(rs.getLong("machine_id"));
+            task.setMachineNames(rs.getString("machine_name")); // 直接用現有的 machineNames 欄位
+
+            java.sql.Date taskDate = rs.getDate("task_date");
+            if (taskDate != null) task.setTaskDate(taskDate.toLocalDate());
+
             task.setTaskType(rs.getString("task_type"));
-            task.setCreatedTime(rs.getTimestamp("created_time").toLocalDateTime());
+
+            java.sql.Timestamp createdTs = rs.getTimestamp("created_time");
+            if (createdTs != null) task.setCreatedTime(createdTs.toLocalDateTime());
+
             task.setStatus(rs.getString("status"));
             return task;
         }
     };
 
     public List<RefillTask> findAll() {
-        String sql = """
-                SELECT * FROM RefillTask
-                """;
+        String sql = "SELECT r.refilltask_id, r.team_id, r.region_id, r.machine_id, r.task_date, r.task_type, r.created_time, r.status, " +
+             "rg.region_name, vm.machine_name " +
+             "FROM RefillTask r " +
+             "LEFT JOIN Region rg ON r.region_id = rg.region_id " +
+             "LEFT JOIN VendingMachine vm ON r.machine_id = vm.machine_id";        
         return jdbcTemplate.query(sql, refillTaskMapper);
     }
 
     public List<RefillTask> findByStaffId(Long staffId) {
-        String sql = """
-                SELECT * FROM RefillTask 
-                OUTER JOIN staff_team ON RefillTask.team_id = staff_team.team_id
-                WHERE staff_id = ?
-                """;
+        String sql = "SELECT r.refilltask_id, r.team_id, r.region_id, r.machine_id, r.task_date, r.task_type, r.created_time, r.status, " +
+             "rg.region_name, vm.machine_name " +
+             "FROM RefillTask r " +
+             "JOIN Staff s ON r.team_id = s.team_id " +
+             "LEFT JOIN Region rg ON r.region_id = rg.region_id " +
+             "LEFT JOIN VendingMachine vm ON r.machine_id = vm.machine_id " +
+             "WHERE s.user_id = ?";
         return jdbcTemplate.query(sql, refillTaskMapper, staffId);
     }
 
     public Optional<RefillTask> findByRefillTaskId(Long refillTaskId) {
-        String sql = """
-                SELECT refill_task_id, team_id, region_id, task_date, task_type, created_time, status
-                FROM RefillTask
-                WHERE refill_task_id = ?
-                ORDER BY refill_task_id
-                """;
+        String sql = "SELECT r.refilltask_id, r.team_id, r.region_id, r.machine_id, r.task_date, r.task_type, r.created_time, r.status, " +
+             "rg.region_name, vm.machine_name " +
+             "FROM RefillTask r " +
+             "LEFT JOIN Region rg ON r.region_id = rg.region_id " +
+             "LEFT JOIN VendingMachine vm ON r.machine_id = vm.machine_id " +
+             "WHERE r.refilltask_id = ?";
         return jdbcTemplate.query(sql, refillTaskMapper, refillTaskId).stream().findFirst();
     }
 
     public RefillTask create(RefillTask refillTask) {
-        String sql = """
-                INSERT INTO RefillTask (team_id, region_id, task_date, task_type, created_time, status)
-                VALUES (?, ?, ?, ?, NOW(), ?)
-                """;
+        String sql = "INSERT INTO RefillTask (team_id, region_id, machine_id, task_date, task_type, created_time, status) VALUES (?, ?, ?, ?, NOW(), ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             ps.setLong(1, refillTask.getTeamId());
             ps.setLong(2, refillTask.getRegionId());
-            ps.setDate(3, java.sql.Date.valueOf(refillTask.getTaskDate()));
-            ps.setString(4, refillTask.getTaskType());
-            ps.setString(5, refillTask.getStatus());
+            if (refillTask.getMachineId() != null) {
+                ps.setLong(3, refillTask.getMachineId());
+            } else {
+                ps.setNull(3, java.sql.Types.INTEGER);
+            }
+            if (refillTask.getTaskDate() != null) {
+                ps.setDate(4, java.sql.Date.valueOf(refillTask.getTaskDate()));
+            } else {
+                ps.setNull(4, java.sql.Types.DATE);
+            }
+            ps.setString(5, refillTask.getTaskType());
+            ps.setString(6, refillTask.getStatus());
             return ps;
         }, keyHolder);
 
@@ -93,25 +111,27 @@ public class RefillTaskDao {
     }
 
     public boolean updateStatus(Long refillTaskId, String status) {
-        String sql = """
-                UPDATE RefillTask
-                SET status = ?
-                WHERE refill_task_id = ?
-                """;
+        String sql = "UPDATE RefillTask SET status = ? WHERE refilltask_id = ?";
         int updated = jdbcTemplate.update(sql, status, refillTaskId);
         return updated > 0;
     }
 
+    public boolean updateTeamAndStatus(Long refillTaskId, Long teamId, String status) {
+        String sql = "UPDATE RefillTask SET team_id = ?, status = ? WHERE refilltask_id = ?";
+        int updated = jdbcTemplate.update(sql, teamId, status, refillTaskId);
+        return updated > 0;
+    }
+
     public RefillDetail updateRefillDetail(Long refillDetailsId, RefillDetail refillDetail) {
-        String sql = """
-                UPDATE RefillDetail
-                SET refill_task_id = ?, machine_id = ?, drink_id = ?, planned_quantity = ?, actual_quantity = ?, last_restock = NOW(), update_source = 'Manual'
-                WHERE refill_details_id = ?
-                """;
-        int updated = jdbcTemplate.update(sql, refillDetail.getRefillTaskId(), refillDetail.getMachineId(), refillDetail.getDrinkId(), refillDetail.getPlannedQuantity(), refillDetail.getActualQuantity(), refillDetailsId);
-        if (updated > 0) {
-            return refillDetail;
-        }
-        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Refill detail not found");
+        // Minimal implementation: update actual_quantity and last_restock
+        String sql = "UPDATE RefillDetail SET actual_quantity = ?, last_restock = NOW() WHERE refilldetails_id = ?";
+        jdbcTemplate.update(sql, refillDetail.getActualQuantity(), refillDetailsId);
+        return refillDetail;
+    }
+
+    public boolean delete(Long refillTaskId) {
+        String sql = "DELETE FROM RefillTask WHERE refilltask_id = ?";
+        int deleted = jdbcTemplate.update(sql, refillTaskId);
+        return deleted > 0;
     }
 }

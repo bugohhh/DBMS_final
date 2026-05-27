@@ -60,6 +60,28 @@ public class RefillTaskService {
         return refillTaskDao.updateRefillDetail(refillDetailsId, refillDetail);
     }
 
+    public RefillTask assignRefillTask(Long refillTaskId, Long teamId) {
+        if (refillTaskId == null || teamId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refill task ID and team ID are required");
+        }
+        // 更新 RefillTask 的 team_id 和狀態
+        RefillTask task = getRefillTasksByRefillTaskId(refillTaskId);
+        task.setTeamId(teamId);
+        task.setStatus("Assigned");
+        refillTaskDao.updateTeamAndStatus(refillTaskId, teamId, "Assigned");
+        return getRefillTasksByRefillTaskId(refillTaskId);
+    }
+
+    public void deleteRefillTask(Long refillTaskId) {
+        if (refillTaskId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refill task ID is required");
+        }
+        boolean deleted = refillTaskDao.delete(refillTaskId);
+        if (!deleted) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Refill task not found");
+        }
+    }
+
     private void validateRefillTaskForWrite(RefillTask refillTask) {
         if (refillTask == null
                 || refillTask.getTeamId() == null

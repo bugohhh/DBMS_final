@@ -1,0 +1,166 @@
+/**
+ * 應用主邏輯
+ * 管理頁面切換、工具函數、模態框
+ */
+
+/**
+ * 切換頁面
+ */
+function switchTab(tab) {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    const el = document.getElementById('nav-' + tab);
+    if (el) el.classList.add('active');
+    const area = document.getElementById('main-content');
+
+    if (tab === 'dashboard') renderDashboard(area);
+    else if (tab === 'machines') renderMachines(area);
+    else if (tab === 'tasks') renderTasks(area);
+    else if (tab === 'sales') renderSales(area);
+}
+
+/**
+ * 渲染營運概覽頁面
+ * 使用：GET /machines + GET /refill-tasks
+ */
+async function renderDashboard(area) {
+    area.innerHTML = loadingHTML('載入概覽中...');
+
+    let machines, tasks;
+    if (USE_MOCK) {
+        machines = MOCK.machines;
+        tasks    = MOCK.tasks;
+    } else {
+        // GET /machines → { success, data: [ {machine_id, machine_name, region_name, status, ...} ] }
+        const [mRes, tRes] = await Promise.all([
+            apiFetch('GET', '/machines'),
+            apiFetch('GET', '/refill-tasks'),
+        ]);
+        machines = (await mRes.json()).data;
+        tasks    = (await tRes.json()).data;
+    }
+
+    const user = getCurrentUser();
+    const pending  = tasks.filter(t => t.status === 'Pending').length;
+    const critical = machines.filter(m => m.status === 'Critical').length;
+    const low      = machines.filter(m => m.status === 'Low').length;
+
+    area.innerHTML = `
+        <div class="page-header">
+            <h2>營運概覽</h2>
+            <p>即時監控所有販賣機狀態｜登入身份：${user.user_name}</p>
+        </div>
+        <div class="grid-3" style="margin-bottom:20px">
+            <div class="card stat-card">
+                <div class="label">待補貨任務</div>
+                <div class="value accent-blue">${pending}</div>
+                <div class="sub">單待處理</div>
+            </div>
+            <div class="card stat-card">
+                <div class="label">嚴重缺貨機台</div>
+                <div class="value accent-red">${critical}</div>
+                <div class="sub">台需立即補貨</div>
+            </div>
+            <div class="card stat-card">
+                <div class="label">庫存偏低機台</div>
+                <div class="value accent-yellow">${low}</div>
+                <div class="sub">台需關注</div>
+            </div>
+        </div>
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                <div style="font-weight:700">機台狀態總覽</div>
+                <button class="btn btn-ghost" onclick="switchTab('machines')">查看全部 →</button>
+            </div>
+            <table>
+                <thead><tr>
+                    <th>機台</th><th>地區</th><th>庫存明細</th><th>狀態</th>
+                </tr></thead>
+                <tbody>
+                ${machines.map(m => `
+                    <tr>
+                        <td style="font-weight:700">${m.machine_name}<br>
+                            <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">#${m.machine_id}</span>
+                        </td>
+                        <td style="color:var(--muted)">${m.region_name}</td>
+                        <td style="font-size:12px;color:var(--muted)">
+                            ${(m.inventory||[]).map(i => `${i.drink_name}: ${i.quantity}`).join(' ／ ')}
+                        </td>
+                        <td>${statusBadge(m.status)}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>`;
+}
+
+/**
+ * 工具函數：載入狀態提示
+ */
+function loadingHTML(msg) {
+    return `<div style="padding:60px;text-align:center;color:var(--muted)">${msg}</div>`;
+}
+
+/**
+ * 工具函數：狀態徽章（機台狀態）
+ */
+function statusBadge(s) {
+    // 對應後端回傳的 status 字串
+    const map = {
+        Normal:   ['badge-ok',   '✓ 正常'],
+        Low:      ['badge-warn', '⚠ 偏低'],
+        Critical: ['badge-err',  '✕ 缺貨'],
+    };
+    const [cls, label] = map[s] || ['badge-ok', s];
+    return `<span class="badge ${cls}">${label}</span>`;
+}
+
+/**
+ * 工具函數：狀態徽章（任務狀態）
+ */
+function taskStatusBadge(s) {
+    const map = {
+        Pending:     ['badge-warn', '⏳ 待處理'],
+        'In Progress':['badge-ok',  '🔄 進行中'],
+        Completed:   ['badge-ok',   '✓ 已完成'],
+        Assigned:    ['badge-ok',   '✓ 已分派'],
+    };
+    const [cls, label] = map[s] || ['badge-warn', s];
+    return `<span class="badge ${cls}">${label}</span>`;
+}
+
+/**
+ * 模態框：打開
+ */
+function openModal(id) {
+    document.getElementById(id).classList.add('open');
+}
+
+/**
+ * 模態框：關閉
+ */
+function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+}
+
+/**
+ * 吐司提示
+ */
+let toastTimer;
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/**
+ * 初始化事件監聽
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    // 點擊 Modal 背景關閉
+    document.querySelectorAll('.modal-backdrop').forEach(b => {
+        b.addEventListener('click', e => { 
+            if (e.target === b) b.classList.remove('open'); 
+        });
+    });
+});

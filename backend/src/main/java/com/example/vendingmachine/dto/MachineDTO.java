@@ -6,6 +6,7 @@ public class MachineDTO {
     private Long machine_id;
     private String machine_name;
     private String region_name;
+    private Long region_id;
     private String status;
     private List<InventoryItemDTO> inventory;
 
@@ -19,5 +20,7 @@ public class MachineDTO {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public List<InventoryItemDTO> getInventory() { return inventory; }
+    public Long getRegion_id() { return region_id; }
+    public void setRegion_id(Long region_id) { this.region_id = region_id; }
     public void setInventory(List<InventoryItemDTO> inventory) { this.inventory = inventory; }
 }
