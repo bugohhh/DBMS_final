@@ -3,6 +3,7 @@ package com.example.vendingmachine.service;
 import com.example.vendingmachine.dao.DrinkDao;
 import com.example.vendingmachine.dao.VendingMachineDao;
 import com.example.vendingmachine.dto.InventoryItemDTO;
+import com.example.vendingmachine.dto.MachineDTO;
 import com.example.vendingmachine.model.Drink;
 import com.example.vendingmachine.model.VendingMachine;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,24 @@ public class MachineAndDrinkService {
                 .orElseThrow(() -> new RuntimeException("找不到該販賣機，ID: " + id));
     }
 
+    public List<MachineDTO> getMachinesByStaffUserId(Long userId) {
+        String sql = "SELECT DISTINCT vm.machine_id, vm.machine_name, vm.status, vm.location, rg.region_name, rg.region_id " +
+                    "FROM VendingMachine vm " +
+                    "JOIN RefillTask rt ON vm.machine_id = rt.machine_id " +
+                    "JOIN Staff s ON rt.team_id = s.team_id " +
+                    "JOIN Region rg ON vm.region_id = rg.region_id " +
+                    "WHERE s.user_id = ?";
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            MachineDTO dto = new MachineDTO();
+            dto.setMachine_id(rs.getLong("machine_id"));
+            dto.setMachine_name(rs.getString("machine_name"));
+            dto.setRegion_name(rs.getString("region_name"));
+            dto.setRegion_id(rs.getLong("region_id"));
+            dto.setStatus(rs.getString("status"));
+            return dto;
+        }, userId);
+    }
+
     public VendingMachine createMachine(VendingMachine machine) {
         return vendingMachineDao.save(machine);
     }
@@ -58,6 +77,11 @@ public class MachineAndDrinkService {
         machine.setMachineName(updatedMachine.getMachineName());
         machine.setRegionId(updatedMachine.getRegionId());
         return vendingMachineDao.save(machine);
+    }
+
+    public void updateMachineStatus(Long machineId, String status) {
+        String sql = "UPDATE VendingMachine SET status = ? WHERE machine_id = ?";
+        jdbcTemplate.update(sql, status, machineId);
     }
 
     public void deleteMachine(Long id) {
