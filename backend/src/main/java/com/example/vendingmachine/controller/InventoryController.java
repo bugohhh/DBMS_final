@@ -72,6 +72,18 @@ public class InventoryController {
         requireValidToken(authorization);
         return ApiResponse.success("Inventory updated", inventoryService.updateInventory(inventoryId, inventory));
     }
+
+    @PutMapping("/machines/{machine_id}/drinks/{drink_id}/inventory")
+    public ApiResponse<Inventory> updateInventoryByMachineIdAndDrinkId(
+            @PathVariable("machine_id") Long machineId,
+            @PathVariable("drink_id") Long drinkId,
+            @RequestBody Inventory inventory,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        requireValidToken(authorization);
+        return ApiResponse.success("Inventory updated", inventoryService.updateInventoryByMachineIdAndDrinkId(machineId, drinkId, inventory));
+    }
+
     //todo
     @DeleteMapping("/inventory/{inventory_id}")
     public ApiResponse<Void> deleteInventory(

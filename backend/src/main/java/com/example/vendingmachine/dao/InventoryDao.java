@@ -100,6 +100,23 @@ public class InventoryDao {
         return updated > 0;
     }
 
+    public boolean updateByMachineAndDrink(Long machineId, Long drinkId, Inventory inventory) {
+        String sql = """
+                UPDATE Inventory
+                SET quantity = ?, price = ?, threshold = ?, capacity = ?, last_restock = NOW(), update_source = 'Manual'
+                WHERE machine_id = ? AND drink_id = ?
+                """;
+        int updated = jdbcTemplate.update(sql,
+                inventory.getQuantity(),
+                inventory.getPrice(),
+                inventory.getLowStockThreshold(),
+                inventory.getCapacity(),
+                machineId,
+                drinkId
+        );
+        return updated > 0;
+    }
+
     public boolean updateQuantityByMachineAndDrink(Long machineId, Long drinkId, Integer quantity, String updateSource) {
         String sql = """
                 UPDATE Inventory

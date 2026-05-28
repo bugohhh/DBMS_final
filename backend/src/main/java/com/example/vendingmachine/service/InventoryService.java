@@ -43,6 +43,20 @@ public class InventoryService {
         );
     }
 
+    public Inventory updateInventoryByMachineIdAndDrinkId(Long machineId, Long drinkId, Inventory inventory) {
+        if (machineId == null || drinkId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "machineId and drinkId are required");
+        }
+        validateInventoryForUpdate(inventory);
+        boolean updated = inventoryDao.updateByMachineAndDrink(machineId, drinkId, inventory);
+        if (!updated) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found for this machine and drink");
+        }
+        return inventoryDao.findByMachineIdAndDrinkId(machineId, drinkId).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found for this machine and drink")
+        );
+    }
+
     public void updateInventoryFromDevice(Long machineId, Long drinkId, Integer quantity) {
         if (machineId == null || drinkId == null || quantity == null || quantity < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "machineId, drinkId and non-negative quantity are required");
