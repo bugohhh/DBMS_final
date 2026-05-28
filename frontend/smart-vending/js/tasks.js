@@ -60,12 +60,15 @@ async function renderTasks(area) {
         <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
                 <div style="font-weight:700">目前補貨排程</div>
+                <input type="text" id="task-search" placeholder="🔍 搜尋地區、機台、類型..."
+                    oninput="filterTasks()"
+                    style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;width:280px;" />
             </div>
             <table>
                 <thead><tr>
                     <th>任務編號</th><th>地區</th><th>機台</th><th>班組</th><th>任務日期</th><th>類型</th><th>狀態</th><th>操作</th>
                 </tr></thead>
-                <tbody>
+                <tbody id="task-table-body">
                 ${tasks.map(t => `
                     <tr>
                         <td style="font-family:var(--mono);color:var(--muted)">#${t.refillTaskId}</td>
@@ -394,5 +397,24 @@ async function submitStaffComplete() {
     } catch (e) {
         showToast('❌ 回報失敗：' + e.message);
     }
+}
+
+//新增任務裡找機台
+function filterMachineOptions() {
+    const keyword = document.getElementById('machine-search-input')?.value.toLowerCase() || '';
+    const options = document.querySelectorAll('#new-assign-machine option');
+    options.forEach(opt => {
+        opt.style.display = opt.textContent.toLowerCase().includes(keyword) ? '' : 'none';
+    });
+}
+
+
+//補貨任務搜尋
+function filterTasks() {
+    const keyword = document.getElementById('task-search')?.value.toLowerCase() || '';
+    const rows = document.querySelectorAll('#task-table-body tr');
+    rows.forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(keyword) ? '' : 'none';
+    });
 }
 

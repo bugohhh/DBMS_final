@@ -171,7 +171,11 @@
         <h3>➕ 新增分派任務</h3>
         <div class="form-group">
             <label>選擇機台</label>
-            <select id="new-assign-machine" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);">
+            <input type="text" id="machine-search-input" placeholder="🔍 輸入機台名稱或地區篩選..."
+                oninput="filterMachineOptions()"
+                style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px 8px 0 0;color:var(--text);font-family:inherit;font-size:13px;border-bottom:none;" />
+            <select id="new-assign-machine" size="4"
+                style="width:100%;padding:8px;border-radius:0 0 8px 8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;">
                 <option value="">-- 載入中... --</option>
             </select>
         </div>

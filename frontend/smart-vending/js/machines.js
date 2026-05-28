@@ -50,6 +50,11 @@ async function renderMachines(area) {
             ${isManager ? `<button class="btn btn-primary" onclick="openAddMachineModal()">+ 新增機台</button>` : ''}
         </div>
         <div class="card">
+            <div style="margin-bottom:16px;">
+                <input type="text" id="machine-search" placeholder="🔍 搜尋機台名稱、地區或飲料..." 
+                    oninput="filterMachines()"
+                    style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:14px;" />
+            </div>
             ${machines.length === 0 ? `
                 <div style="padding:40px;text-align:center;color:var(--muted)">
                     📭 目前沒有機台。${isManager ? '點擊「新增機台」建立第一台。' : ''}
@@ -61,6 +66,7 @@ async function renderMachines(area) {
                         ${isManager ? '<th>操作</th>' : ''}
                     </tr></thead>
                     <tbody>
+                    <tbody id="machine-table-body">
                     ${machines.map(m => `
                         <tr>
                             <td style="font-family:var(--mono);color:var(--muted)">#${m.machine_id}</td>
@@ -280,4 +286,13 @@ async function reportMachineStatus(machineId, status) {
     } catch (e) {
         showToast('❌ 更新失敗：' + e.message);
     }
+}
+
+//找機台
+function filterMachines() {
+    const keyword = document.getElementById('machine-search')?.value.toLowerCase() || '';
+    const rows = document.querySelectorAll('#machine-table-body tr');
+    rows.forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(keyword) ? '' : 'none';
+    });
 }

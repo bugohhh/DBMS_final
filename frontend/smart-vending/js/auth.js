@@ -151,22 +151,39 @@ async function loginConsumer() {
     } catch(e) {
         machines = MOCK.machines;
     }
+    // 預載所有機台庫存
+    await Promise.all(machines.map(async m => {
+        try {
+            const res = await fetch(`${BASE_URL}/public/machines/${m.machine_id}/inventory`);
+            const data = await res.json();
+            m.inventory = data.data || [];
+        } catch(e) {
+            m.inventory = [];
+        }
+    }));
 
-    // 渲染機台選擇按鈕
+    _allConsumerMachines = machines;
+
+    // 在機台按鈕上方加搜尋欄
+    document.getElementById('machine-selector').insertAdjacentHTML('beforebegin', `
+        <input type="text" id="consumer-search" placeholder="🔍 搜尋機台或地區..."
+            oninput="filterConsumerMachines()"
+            style="padding:8px 14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:20px;color:#fff;font-family:inherit;font-size:13px;width:280px;margin-bottom:8px;" />
+    `);
+
     const selector = document.getElementById('machine-selector');
     selector.innerHTML = machines.map((m, i) => `
         <button onclick="loadConsumerMachine(${m.machine_id}, '${m.machine_name}')"
             style="padding:8px 14px;border-radius:20px;border:1px solid var(--border);
-                   background:${i===0?'var(--accent)':'var(--surface)'};
-                   color:${i===0?'#fff':'var(--muted)'};
-                   cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;
-                   transition:all .2s;"
+                background:${i===0?'var(--accent)':'var(--surface)'};
+                color:${i===0?'#fff':'var(--muted)'};
+                cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;
+                transition:all .2s;"
             id="machine-btn-${m.machine_id}">
             ${m.machine_name}
         </button>
     `).join('');
 
-    // 預設載入第一台
     if (machines.length > 0) {
         loadConsumerMachine(machines[0].machine_id, machines[0].machine_name);
     }
@@ -186,7 +203,8 @@ async function loadConsumerMachine(machineId, machineName) {
 
     // 更新標題
     document.getElementById('consumer-machine-name').textContent = machineName;
-    document.getElementById('consumer-machine-id').textContent = `機台編號: VM-00${machineId}`;
+    const machine = _allConsumerMachines.find(m => m.machine_id === machineId);
+    document.getElementById('consumer-machine-id').textContent = `機台編號: VM-00${machineId}${machine?.region_name ? ' · ' + machine.region_name : ''}`;
     document.getElementById('consumer-inventory').innerHTML =
         '<div style="text-align:center;color:var(--muted);padding:20px">載入中...</div>';
 
@@ -277,4 +295,37 @@ async function logout() {
     // 徹底清除前端瀏覽器的記憶、重刷網頁，就會自動跳回登入畫面！
     clearAuth();
     location.reload();
+}
+
+
+let _allConsumerMachines = [];
+
+//消費者找機台
+function filterConsumerMachines() {
+    const keyword = document.getElementById('consumer-search')?.value.toLowerCase() || '';
+    const selector = document.getElementById('machine-selector');
+    const filtered = _allConsumerMachines.filter(m => {
+        const nameMatch = m.machine_name.toLowerCase().includes(keyword);
+        const regionMatch = (m.region_name || '').toLowerCase().includes(keyword);
+        const inventoryMatch = (m.inventory || []).some(i => 
+            i.drinkName.toLowerCase().includes(keyword) && i.quantity > 0
+        );
+        return nameMatch || regionMatch || inventoryMatch;
+    });
+
+    selector.innerHTML = filtered.map((m, i) => `
+        <button onclick="loadConsumerMachine(${m.machine_id}, '${m.machine_name}')"
+            style="padding:8px 14px;border-radius:20px;border:1px solid var(--border);
+                background:${i===0?'var(--accent)':'var(--surface)'};
+                color:${i===0?'#fff':'var(--muted)'};
+                cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;
+                transition:all .2s;"
+            id="machine-btn-${m.machine_id}">
+            ${m.machine_name}
+        </button>
+    `).join('');
+
+    if (filtered.length > 0) {
+        loadConsumerMachine(filtered[0].machine_id, filtered[0].machine_name);
+    }
 }
