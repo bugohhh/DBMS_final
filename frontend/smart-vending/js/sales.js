@@ -1,53 +1,75 @@
 /**
- * 銷售分析相關功能（Manager only）
- * 使用：GET /analytics/top-drinks
- *       GET /analytics/sales-summary
- */
-
-/**
  * 渲染銷售分析頁面
+ * @param {HTMLElement} area - 內容容器
+ * @param {string} selectedRegion - 選擇的地區 (預設為 'all')
  */
-async function renderSales(area) {
+async function renderSales(area, selectedRegion = 'all') {
     area.innerHTML = loadingHTML('載入銷售分析...');
 
-    let topDrinks, salesSummary;
+    let topDrinks, salesSummary, regions;
     const today = new Date().toISOString().split('T')[0];
     const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
+
+    // 1. 準備查詢參數
+    let topDrinksUrl = `/analytics/top-drinks?start_date=${weekAgo}&end_date=${today}&limit=5`;
+    let summaryUrl = `/analytics/sales-summary?start_date=${weekAgo}&end_date=${today}&group_by=day`;
+
+    // 如果有選擇特定地區，就把參數加到 URL 後面
+    if (selectedRegion !== 'all') {
+        topDrinksUrl += `&region=${encodeURIComponent(selectedRegion)}`;
+        summaryUrl += `&region=${encodeURIComponent(selectedRegion)}`;
+    }
 
     if (USE_MOCK) {
         topDrinks    = MOCK.topDrinks;
         salesSummary = MOCK.salesSummary;
+        // 假資料的地區選項
+        regions = [{ region_id: '文山區', region_name: '文山區' }, { region_id: '信義區', region_name: '信義區' }];
     } else {
-        // GET /analytics/top-drinks?start_date=...&end_date=...&limit=5
-        // GET /analytics/sales-summary?start_date=...&end_date=...&group_by=day
-        const [tRes, sRes] = await Promise.all([
-            apiFetch('GET', `/analytics/top-drinks?start_date=${weekAgo}&end_date=${today}&limit=5`),
-            apiFetch('GET', `/analytics/sales-summary?start_date=${weekAgo}&end_date=${today}&group_by=day`),
+        // 2. 呼叫 API：這裡多加一個抓取「所有地區」的 API 來產生選單
+        // 假設你後端有寫好 GET /regions 的 API (從你之前的截圖看到你有 RegionDao)
+        const [tRes, sRes, rRes] = await Promise.all([
+            apiFetch('GET', topDrinksUrl),
+            apiFetch('GET', summaryUrl),
+            apiFetch('GET', '/regions') // 獲取地區清單
         ]);
         topDrinks    = (await tRes.json()).data;
         salesSummary = (await sRes.json()).data;
+        regions      = (await rRes.json()).data; 
     }
 
-    const maxQty = Math.max(...topDrinks.map(d => d.total_quantity));
+    const maxQty = topDrinks.length ? Math.max(...topDrinks.map(d => d.total_quantity)) : 1;
     const totalQty = topDrinks.reduce((a, b) => a + b.total_quantity, 0);
     const totalRev = topDrinks.reduce((a, b) => a + b.total_revenue, 0);
 
+    // 3. 產生下拉選單的 HTML (onchange 時重新呼叫 renderSales)
+    const regionOptions = `<option value="all" ${selectedRegion === 'all' ? 'selected' : ''}>🌍 所有地區 (整體營收)</option>` +
+        regions.map(r => `<option value="${r.region_name}" ${selectedRegion === r.region_name ? 'selected' : ''}>📍 ${r.region_name}</option>`).join('');
+
     area.innerHTML = `
-        <div class="page-header">
-            <h2>銷售分析</h2>
-            <p>近 7 日銷售數據</p>
+        <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <div>
+                <h2>銷售分析</h2>
+                <p>近 7 日銷售數據</p>
+            </div>
+            <div class="form-group" style="margin-bottom:0; min-width:200px;">
+                <select id="region-filter" onchange="renderSales(document.getElementById('main-content'), this.value)"
+                        style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-family:inherit;">
+                    ${regionOptions}
+                </select>
+            </div>
         </div>
         <div class="grid-2">
             <div class="card">
                 <div style="font-weight:700;margin-bottom:24px">熱門商品 Top ${topDrinks.length}</div>
-                ${topDrinks.map((d, i) => `
+                ${topDrinks.length > 0 ? topDrinks.map((d, i) => `
                     <div class="bar-row">
                         <div class="bar-label">${i+1}. ${d.drink_name}</div>
                         <div class="bar-track">
                             <div class="bar-fill" style="width:0%" data-pct="${Math.round(d.total_quantity/maxQty*100)}"></div>
                         </div>
                         <div class="bar-val">${d.total_quantity.toLocaleString()}</div>
-                    </div>`).join('')}
+                    </div>`).join('') : '<div style="color:var(--muted);text-align:center;">該地區無銷售紀錄</div>'}
             </div>
             <div class="card">
                 <div style="font-weight:700;margin-bottom:20px">週期概況</div>
@@ -66,11 +88,11 @@ async function renderSales(area) {
                 <div style="margin-top:20px">
                     <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">每日銷量趨勢</div>
                     <div style="display:flex;align-items:flex-end;gap:4px;height:60px">
-                    ${salesSummary.map(s => {
+                    ${salesSummary.length > 0 ? salesSummary.map(s => {
                         const maxS = Math.max(...salesSummary.map(x => x.total_quantity));
-                        const h = Math.round(s.total_quantity / maxS * 100);
+                        const h = maxS > 0 ? Math.round(s.total_quantity / maxS * 100) : 0;
                         return `<div style="flex:1;background:var(--accent);opacity:.7;height:${h}%;border-radius:3px 3px 0 0;position:relative" title="${s.label}: ${s.total_quantity}"></div>`;
-                    }).join('')}
+                    }).join('') : ''}
                     </div>
                     <div style="display:flex;gap:4px;margin-top:4px">
                     ${salesSummary.map(s => `<div style="flex:1;font-size:9px;color:var(--muted);text-align:center">${s.label}</div>`).join('')}
