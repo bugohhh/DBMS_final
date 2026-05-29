@@ -1,4 +1,4 @@
-const API_BASE = "/api";
+const API_BASE = "http://localhost:8080/api";
 const BOTTLE_PLACEHOLDER = "data:image/svg+xml;utf8," + encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 170">
   <defs>
