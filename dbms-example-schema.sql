@@ -53,6 +53,7 @@ CREATE TABLE `Inventory` (
   `last_restock` datetime DEFAULT NULL,
   `update_source` enum('Auto','Manual') DEFAULT NULL,
   PRIMARY KEY (`inventory_id`),
+  UNIQUE KEY `uq_inventory_machine_drink` (`machine_id`,`drink_id`),
   KEY `machine_id` (`machine_id`),
   KEY `drink_id` (`drink_id`),
   CONSTRAINT `inventory_ibfk_1` FOREIGN KEY (`machine_id`) REFERENCES `VendingMachine` (`machine_id`),

@@ -32,13 +32,29 @@ public class DrinkDao {
 
 
     public List<Drink> findAll() {
-        String sql = "SELECT * FROM Drink";
+        String sql = "SELECT drink_id, drink_name, brand, category, size, status FROM Drink";
         return jdbcTemplate.query(sql, drinkRowMapper);
     }
 
 
+    public List<Drink> findActive() {
+        String sql = "SELECT drink_id, drink_name, brand, category, size, status FROM Drink WHERE status = 'Active'";
+        return jdbcTemplate.query(sql, drinkRowMapper);
+    }
+
+    public List<Drink> findByName(String name) {
+        String sql = """
+                SELECT drink_id, drink_name, brand, category, size, status
+                FROM Drink
+                WHERE LOWER(drink_name) LIKE LOWER(?)
+                ORDER BY drink_name, drink_id
+                """;
+        return jdbcTemplate.query(sql, drinkRowMapper, "%" + name + "%");
+    }
+
+
     public Optional<Drink> findById(Long id) {
-        String sql = "SELECT * FROM Drink WHERE Drink_id = ?";
+        String sql = "SELECT drink_id, drink_name, brand, category, size, status FROM Drink WHERE drink_id = ?";
         List<Drink> list = jdbcTemplate.query(sql, drinkRowMapper, id);
         return list.stream().findFirst();
     }
@@ -58,7 +74,7 @@ public class DrinkDao {
 
 
     public void deleteById(Long id) {
-        String sql = "DELETE FROM Drink WHERE Drink_id = ?";
+        String sql = "DELETE FROM Drink WHERE drink_id = ?";
         jdbcTemplate.update(sql, id);
     }
 }

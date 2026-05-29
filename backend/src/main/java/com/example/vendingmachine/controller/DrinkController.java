@@ -2,8 +2,12 @@ package com.example.vendingmachine.controller;
 
 import com.example.vendingmachine.dto.ApiResponse;
 import com.example.vendingmachine.model.Drink;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.*;
+import com.example.vendingmachine.service.DrinkService;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -11,23 +15,24 @@ import java.util.List;
 @RequestMapping("/api")
 public class DrinkController {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final DrinkService drinkService;
 
-    public DrinkController(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    public DrinkController(DrinkService drinkService) {
+        this.drinkService = drinkService;
     }
 
     @GetMapping("/public/drinks")
     public ApiResponse<List<Drink>> getAllDrinks() {
-        List<Drink> drinks = jdbcTemplate.query(
-            "SELECT drink_id, drink_name, brand, category, size, status FROM Drink WHERE status = 'Active'",
-            (rs, rowNum) -> {
-                Drink d = new Drink();
-                d.setDrinkId(rs.getLong("drink_id"));
-                d.setDrinkName(rs.getString("drink_name"));
-                return d;
-            }
-        );
-        return ApiResponse.success("Drink list", drinks);
+        return ApiResponse.success("Drink list", drinkService.getActiveDrinks());
+    }
+
+    @GetMapping("/drinks/by-name")
+    public ApiResponse<List<Drink>> getDrinksByName(@RequestParam("name") String name) {
+        return ApiResponse.success("Drink search result", drinkService.getDrinksByName(name));
+    }
+
+    @GetMapping("/drinks/{drink_id}")
+    public ApiResponse<Drink> getDrinkById(@PathVariable("drink_id") Long drinkId) {
+        return ApiResponse.success("Drink detail", drinkService.getDrinkById(drinkId));
     }
 }

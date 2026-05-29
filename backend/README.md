@@ -90,6 +90,7 @@ http://localhost:8080/api
 - `GET /api/machines/{machine_id}/inventory`
 - `POST /api/inventory`
 - `PUT /api/inventory/{inventory_id}`
+- `PUT /api/machines/{machine_id}/drinks/{drink_id}/inventory`
 - `GET /api/inventory/low-stock`
 - `GET /api/public/machines/{machine_id}/inventory`
 

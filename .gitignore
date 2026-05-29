@@ -2,6 +2,8 @@
 backend/target/
 *.class
 
+API功能改動清單.txt
+
 # IDE
 .idea/
 .vscode/

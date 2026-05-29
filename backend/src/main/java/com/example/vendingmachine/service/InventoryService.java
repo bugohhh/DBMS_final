@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.vendingmachine.dao.InventoryDao;
+import com.example.vendingmachine.dto.InventoryDetailsDTO;
 import com.example.vendingmachine.dto.PublicInventoryDTO;
 import com.example.vendingmachine.model.Inventory;
 
@@ -25,6 +26,9 @@ public class InventoryService {
 
     public Inventory createInventory(Inventory inventory) {
         validateInventoryForWrite(inventory);
+        if (inventoryDao.findByMachineIdAndDrinkId(inventory.getMachineId(), inventory.getDrinkId()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Inventory item already exists for this machine and drink");
+        }
         return inventoryDao.create(inventory);
     }
 
@@ -36,6 +40,20 @@ public class InventoryService {
         }
         return inventoryDao.findById(inventoryId).orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory not found")
+        );
+    }
+
+    public Inventory updateInventoryByMachineIdAndDrinkId(Long machineId, Long drinkId, Inventory inventory) {
+        if (machineId == null || drinkId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "machineId and drinkId are required");
+        }
+        validateInventoryForUpdate(inventory);
+        boolean updated = inventoryDao.updateByMachineAndDrink(machineId, drinkId, inventory);
+        if (!updated) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found for this machine and drink");
+        }
+        return inventoryDao.findByMachineIdAndDrinkId(machineId, drinkId).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found for this machine and drink")
         );
     }
 
@@ -83,6 +101,49 @@ public class InventoryService {
         if (inventory == null || inventory.getQuantity() == null || inventory.getQuantity() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "non-negative quantity is required");
         }
+    }
+
+
+    public List<InventoryDetailsDTO> getInventoryDetailsByMachineId(Long machineId) {
+        return inventoryDao.findDetailsByMachineId(machineId);
+    }
+
+    public List<InventoryDetailsDTO> getLowStockInventoryDetails() {
+        return inventoryDao.findLowStockDetails();
+    }
+
+    public List<InventoryDetailsDTO> getPublicInventoryDetailsByMachineId(Long machineId) {
+        return inventoryDao.findPublicDetailsByMachineId(machineId);
+    }
+
+    public Inventory getInventoryByMachineIdAndDrinkId(Long machineId, Long drinkId) {
+        if (machineId == null || drinkId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "machineId and drinkId are required");
+        }
+        return inventoryDao.findByMachineIdAndDrinkId(machineId, drinkId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found for this machine and drink"));
+    }
+
+    public List<InventoryDetailsDTO> searchInventory(String keyword) {
+        List<String> keywords = parseKeywords(keyword);
+        return inventoryDao.searchInventory(keywords);
+    }
+
+    public List<InventoryDetailsDTO> searchInventoryByRegion(Long regionId, String keyword) {
+        if (regionId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "regionId is required");
+        }
+        List<String> keywords = parseKeywords(keyword);
+        return inventoryDao.searchInventoryByRegion(regionId, keywords);
+    }
+
+    private List<String> parseKeywords(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "keyword is required");
+        }
+        return java.util.Arrays.stream(keyword.trim().split("\\s+"))
+                .filter(part -> !part.isBlank())
+                .toList();
     }
 
     public List<PublicInventoryDTO> getPublicInventoryByMachineId(Long machineId) {
