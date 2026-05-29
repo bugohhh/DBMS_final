@@ -216,9 +216,11 @@ public class InventoryDao {
     public List<InventoryDetailsDTO> findPublicDetailsByMachineId(Long machineId) {
         String sql = """
                 SELECT i.inventory_id, i.machine_id, i.drink_id, i.quantity, i.price, i.threshold, i.capacity,
-                       d.drink_name, d.brand, d.category, d.size
+                       d.drink_name, d.brand, d.category, d.size,
+                       vm.machine_name, vm.location
                 FROM Inventory i
                 JOIN Drink d ON i.drink_id = d.drink_id
+                JOIN VendingMachine vm ON i.machine_id = vm.machine_id
                 WHERE i.machine_id = ?
                 ORDER BY d.drink_name, i.inventory_id
                 """;

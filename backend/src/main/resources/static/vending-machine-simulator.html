@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧販賣機模擬器</title>
+    <link rel="stylesheet" href="vending-machine-simulator.css">
+</head>
+<body>
+    <main class="page-shell">
+        <section class="hero-panel">
+            <div>
+                <p class="eyebrow">Smart Vending Machine DBMS Demo</p>
+                <h1>智慧飲料販賣機模擬器</h1>
+                <p class="hero-text">直接連接 Spring Boot API 與資料庫，展示查詢庫存、購買扣庫存、建立銷售紀錄與補貨後同步。</p>
+            </div>
+
+            <form id="machine-form" class="machine-form">
+                <label for="machine-id-input">Vending Machine ID</label>
+                <div class="machine-input-row">
+                    <input id="machine-id-input" type="number" min="1" value="1" required>
+                    <button type="submit">刷新庫存</button>
+                </div>
+                <small>切換 ID 後按刷新，資料會重新從資料庫讀取。</small>
+            </form>
+        </section>
+
+        <section class="simulator-layout">
+            <section class="vending-machine" aria-label="自動販賣機">
+                <div class="machine-top-light"></div>
+
+                <header class="machine-header">
+                    <div>
+                        <span class="machine-label">MACHINE ID</span>
+                        <strong id="machine-id-display">-</strong>
+                    </div>
+                    <div>
+                        <span class="machine-label">NAME</span>
+                        <strong id="machine-name-display">尚未載入</strong>
+                    </div>
+                    <div>
+                        <span class="machine-label">LOCATION</span>
+                        <strong id="machine-location-display">-</strong>
+                    </div>
+                </header>
+
+                <div id="status-message" class="status-message info">請輸入 machine_id，按「刷新庫存」。</div>
+
+                <div class="glass-window">
+                    <div id="product-grid" class="product-grid empty-state">
+                        <p>尚未載入商品。</p>
+                    </div>
+                </div>
+
+                <footer class="machine-footer">
+                    <div class="coin-slot">
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <div class="pickup-box">PICK UP</div>
+                </footer>
+            </section>
+
+            <aside class="demo-panel">
+                <h2>Demo 流程</h2>
+                <ol>
+                    <li>輸入 machine_id，例如 1。</li>
+                    <li>按「刷新庫存」讀取資料庫庫存。</li>
+                    <li>按商品的「購買」按鈕。</li>
+                    <li>後端新增 SalesRecord，並扣除 Inventory.quantity。</li>
+                    <li>畫面立即更新，不需手動刷新。</li>
+                    <li>若後台補貨完成，按「刷新庫存」重新同步。</li>
+                </ol>
+
+                <div class="api-card">
+                    <h3>使用 API</h3>
+                    <code>GET /api/machines/{machineId}</code>
+                    <code>GET /api/public/machines/{machineId}/inventory/details</code>
+                    <code>POST /api/machines/{machineId}/purchase</code>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <script src="vending-machine-simulator.js"></script>
+</body>
+</html>
