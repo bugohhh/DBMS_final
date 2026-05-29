@@ -117,33 +117,6 @@
     </div>
 </div>
 
-<!-- ═══════════════ MODAL: 補貨完成 ═══════════════ -->
-<div class="modal-backdrop" id="modal-restock">
-    <div class="modal">
-        <h3>✅ 更新補貨進度</h3>
-        <div class="form-group">
-            <label>任務編號</label>
-            <input type="text" id="modal-task-id" readonly style="background:var(--bg);color:var(--muted);" />
-        </div>
-        <div class="form-group">
-            <label>實際補貨數量（可樂）</label>
-            <input type="number" id="modal-qty-cola" value="20" />
-        </div>
-        <div class="form-group">
-            <label>實際補貨數量（紅茶）</label>
-            <input type="number" id="modal-qty-tea" value="15" />
-        </div>
-        <div class="form-group">
-            <label>備註</label>
-            <input type="text" id="modal-note" placeholder="選填，例如：機台外觀破損" />
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-ghost" onclick="closeModal('modal-restock')">取消</button>
-            <button class="btn btn-primary" onclick="submitRestock()">確認送出</button>
-        </div>
-    </div>
-</div>
-
 <!-- ═══════════════ MODAL: 分派補貨任務 ═══════════════ -->
 <div class="modal-backdrop" id="modal-assign-task">
     <div class="modal">
@@ -213,14 +186,40 @@
             <input type="text" id="new-vm-location" placeholder="例：法學院一樓走廊" />
         </div>
         <div class="form-group">
-            <label>初始庫存設定</label>
-            <div id="new-vm-inventory" style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <label style="margin:0;">初始庫存設定</label>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="openModal('modal-add-drink')">+ 新增飲料</button>
+            </div>
+            <div id="new-vm-inventory" style="display:flex;flex-direction:column;gap:10px;">
                 <div style="color:var(--muted);font-size:13px">載入飲料清單...</div>
             </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" onclick="closeModal('modal-add-machine')">取消</button>
             <button class="btn btn-primary" onclick="submitAddMachine()">新增</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ MODAL: 新增飲料 ═══════════════ -->
+<div class="modal-backdrop" id="modal-add-drink">
+    <div class="modal">
+        <h3>🥤 新增飲料</h3>
+        <div class="form-group">
+            <label>飲料名稱</label>
+            <input type="text" id="new-drink-name" placeholder="例：舒跑 500ml" />
+        </div>
+        <div class="form-group">
+            <label>品牌</label>
+            <input type="text" id="new-drink-brand" placeholder="例：統一" />
+        </div>
+        <div class="form-group">
+            <label>價錢</label>
+            <input type="number" id="new-drink-price" placeholder="例：30" />
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-add-drink')">取消</button>
+            <button class="btn btn-primary" onclick="submitAddDrink()">新增</button>
         </div>
     </div>
 </div>
@@ -241,6 +240,22 @@
         <div class="modal-footer">
             <button class="btn btn-ghost" onclick="closeModal('modal-staff-complete')">取消</button>
             <button class="btn btn-primary" onclick="submitStaffComplete()">確認送出</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════ MODAL: 編輯庫存 ═══════════════ -->
+<div class="modal-backdrop" id="modal-edit-inventory">
+    <div class="modal" style="width:560px">
+        <h3>📦 編輯庫存</h3>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:16px;" id="edit-inv-machine-name"></div>
+        <div id="edit-inv-container" style="display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto;">
+            <div style="color:var(--muted);font-size:13px;">載入中...</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-edit-inventory')">取消</button>
+            <button class="btn btn-primary" onclick="submitEditInventory()">儲存</button>
         </div>
     </div>
 </div>

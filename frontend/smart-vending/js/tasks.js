@@ -81,8 +81,7 @@ async function renderTasks(area) {
                         <td>
                             ${t.status === 'Pending'
                                 ? `<button class="btn btn-sm btn-primary" onclick="openAssignTaskModal(${t.refillTaskId})">分派</button>
-                                   <button class="btn btn-sm btn-ghost" onclick="openRestockModal(${t.refillTaskId})">更新</button>
-                                   <button class="btn btn-sm btn-danger" onclick="deleteTask(${t.refillTaskId})">刪除</button>`
+                                <button class="btn btn-sm btn-danger" onclick="deleteTask(${t.refillTaskId})">刪除</button>`
                                 : `<button class="btn btn-sm btn-danger" onclick="deleteTask(${t.refillTaskId})">刪除</button>`}
                         </td>
                     </tr>`).join('')}
@@ -217,39 +216,6 @@ async function submitAssignTask() {
     } catch (e) {
         showToast('❌ 分派失敗：' + e.message);
     }
-}
-
-/**
- * 打開補貨完成的 Modal
- */
-function openRestockModal(taskId) {
-    currentRestockTaskId = taskId;
-    document.getElementById('modal-task-id').value = '#' + taskId;
-    openModal('modal-restock');
-}
-
-/**
- * 提交補貨完成
- * PUT /refill-tasks/{taskId}/complete
- */
-async function submitRestock() {
-    const actualQty = parseInt(document.getElementById('modal-qty-cola').value);
-    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
-
-    if (USE_MOCK) {
-        const task = MOCK.tasks.find(t => t.refilltask_id === currentRestockTaskId);
-        if (task) task.status = 'Completed';
-    } else {
-        // PUT /refill-tasks/{taskId}/complete
-        // Body: { completed_time }
-        await apiFetch('PUT', `/refill-tasks/${currentRestockTaskId}/complete`, {
-            completed_time: now,
-        });
-    }
-
-    closeModal('modal-restock');
-    showToast('✅ 補貨任務已完成！');
-    switchTab('tasks');
 }
 
 /**

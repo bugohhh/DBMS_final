@@ -57,7 +57,7 @@ public class InventoryController {
             @RequestBody Inventory inventory,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
-        requireValidToken(authorization);
+        // requireValidToken(authorization);
         return ApiResponse.success("Inventory updated", inventoryService.updateInventory(inventoryId, inventory));
     }
     //todo
@@ -66,7 +66,7 @@ public class InventoryController {
             @PathVariable("inventory_id") Long inventoryId,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
-        requireValidToken(authorization);
+        // requireValidToken(authorization);
         inventoryService.deleteInventory(inventoryId);
         return ApiResponse.success("Inventory deleted", null);
     }
