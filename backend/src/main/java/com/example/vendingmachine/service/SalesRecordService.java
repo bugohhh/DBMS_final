@@ -1,6 +1,7 @@
 package com.example.vendingmachine.service;
 
 import com.example.vendingmachine.dao.SalesRecordDao;
+import com.example.vendingmachine.dto.RegionDrinkSalesSummaryDTO;
 import com.example.vendingmachine.model.SalesRecord;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,13 @@ public class SalesRecordService {
             return getSalesRecords();
         }
         return salesRecordDao.findByFilters(machineId, drinkId);
+    }
+
+    public List<RegionDrinkSalesSummaryDTO> getDrinkSalesSummaryByRegion(Long regionId) {
+        if (regionId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "regionId is required");
+        }
+        return salesRecordDao.sumDrinkSalesByRegion(regionId);
     }
 
     private void validateSalesRecord(SalesRecord salesRecord) {

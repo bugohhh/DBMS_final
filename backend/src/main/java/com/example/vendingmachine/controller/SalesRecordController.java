@@ -1,11 +1,13 @@
 package com.example.vendingmachine.controller;
 
 import com.example.vendingmachine.dto.ApiResponse;
+import com.example.vendingmachine.dto.RegionDrinkSalesSummaryDTO;
 import com.example.vendingmachine.model.SalesRecord;
 import com.example.vendingmachine.service.AuthService;
 import com.example.vendingmachine.service.SalesRecordService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -43,12 +45,24 @@ public class SalesRecordController {
             @RequestParam(value = "drink_id", required = false) Long drinkId,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
+        requireManagerToken(authorization);
+        return ApiResponse.success("Sales record list", salesRecordService.getSalesRecords(machineId, drinkId));
+    }
+
+    @GetMapping("/regions/{region_id}/drink-summary")
+    public ApiResponse<List<RegionDrinkSalesSummaryDTO>> getDrinkSalesSummaryByRegion(
+            @PathVariable("region_id") Long regionId,
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        requireManagerToken(authorization);
+        return ApiResponse.success("Region drink sales summary", salesRecordService.getDrinkSalesSummaryByRegion(regionId));
+    }
+
+    private void requireManagerToken(String authorization) {
         String token = extractBearerToken(authorization);
         if (!authService.isManagerToken(token)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only managers can read sales records");
         }
-
-        return ApiResponse.success("Sales record list", salesRecordService.getSalesRecords(machineId, drinkId));
     }
 
     private void requireValidToken(String authorization) {

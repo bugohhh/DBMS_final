@@ -1,5 +1,6 @@
 package com.example.vendingmachine.dao;
 
+import com.example.vendingmachine.dto.RegionDrinkSalesSummaryDTO;
 import com.example.vendingmachine.model.SalesRecord;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -96,6 +97,25 @@ public class SalesRecordDao {
         }
         sql.append(" ORDER BY sale_time DESC, sales_id DESC");
         return jdbcTemplate.query(sql.toString(), salesRecordMapper, params.toArray());
+    }
+
+    public List<RegionDrinkSalesSummaryDTO> sumDrinkSalesByRegion(Long regionId) {
+        String sql = """
+                SELECT sr.drink_id, d.drink_name, COALESCE(SUM(sr.quantity), 0) AS total_quantity
+                FROM SalesRecord sr
+                JOIN VendingMachine vm ON sr.machine_id = vm.machine_id
+                JOIN Drink d ON sr.drink_id = d.drink_id
+                WHERE vm.region_id = ?
+                GROUP BY sr.drink_id, d.drink_name
+                ORDER BY total_quantity DESC, d.drink_name, sr.drink_id
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            RegionDrinkSalesSummaryDTO dto = new RegionDrinkSalesSummaryDTO();
+            dto.setDrinkId(rs.getLong("drink_id"));
+            dto.setDrinkName(rs.getString("drink_name"));
+            dto.setTotalQuantity(rs.getLong("total_quantity"));
+            return dto;
+        }, regionId);
     }
 
 }
