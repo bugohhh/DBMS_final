@@ -16,6 +16,7 @@ function switchTab(tab) {
     else if (tab === 'machines') renderMachines(area);
     else if (tab === 'tasks') renderTasks(area);
     else if (tab === 'sales') renderSales(area);
+    else if (tab === 'teams') renderTeams(area);
 }
 
 /**

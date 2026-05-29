@@ -5,6 +5,7 @@ public class StaffTeam {
     private Long id;
     private Long teamId;
     private Long staffId;
+    private String staffName;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -14,4 +15,7 @@ public class StaffTeam {
 
     public Long getStaffId() { return staffId; }
     public void setStaffId(Long staffId) { this.staffId = staffId; }
+
+    public String getStaffName() { return staffName; }
+    public void setStaffName(String staffName) { this.staffName = staffName; }
 }

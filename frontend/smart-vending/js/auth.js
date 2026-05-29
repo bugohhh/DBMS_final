@@ -254,9 +254,12 @@ function enterSystem() {
     document.getElementById('admin-view').style.display = 'block';
     const user = getCurrentUser();
     document.getElementById('role-badge').textContent = user.user_name + ' · ' + user.user_type;
+    
 
     // Staff 看不到銷售分析（前端畫面控制，後端仍會擋權限）
     document.getElementById('nav-sales').style.display =
+        user.user_type === 'Manager' ? 'flex' : 'none';
+    document.getElementById('nav-teams').style.display =
         user.user_type === 'Manager' ? 'flex' : 'none';
 
     switchTab('dashboard');
