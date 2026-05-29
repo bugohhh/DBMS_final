@@ -27,15 +27,20 @@ public class StaffTeamDao {
     };
 
     public StaffTeam save(StaffTeam staffTeam) {
-        // 先檢查是否已存在
+        // 檢查 user 是否存在
+        String checkUserSql = "SELECT COUNT(*) FROM `User` WHERE user_id = ?";
+        int userCount = jdbcTemplate.queryForObject(checkUserSql, Integer.class, staffTeam.getStaffId());
+        if (userCount == 0) {
+            throw new RuntimeException("找不到 User ID: " + staffTeam.getStaffId());
+        }
+
+        // 檢查是否已在 Staff 表
         String checkSql = "SELECT COUNT(*) FROM Staff WHERE user_id = ?";
         int count = jdbcTemplate.queryForObject(checkSql, Integer.class, staffTeam.getStaffId());
         if (count > 0) {
-            // 更新 team_id
             String sql = "UPDATE Staff SET team_id = ? WHERE user_id = ?";
             jdbcTemplate.update(sql, staffTeam.getTeamId(), staffTeam.getStaffId());
         } else {
-            // 新增
             String sql = "INSERT INTO Staff (user_id, team_id) VALUES (?, ?)";
             jdbcTemplate.update(sql, staffTeam.getStaffId(), staffTeam.getTeamId());
         }
