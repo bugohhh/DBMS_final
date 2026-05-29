@@ -3,7 +3,8 @@ package com.example.vendingmachine.controller;
 import com.example.vendingmachine.dto.ApiResponse;
 import com.example.vendingmachine.dto.InventoryItemDTO;
 import com.example.vendingmachine.dto.MachineDTO;
-import com.example.vendingmachine.model.VendingMachine; 
+import com.example.vendingmachine.model.VendingMachine;
+import com.example.vendingmachine.service.BaseDataService;
 import com.example.vendingmachine.service.MachineAndDrinkService; 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,8 @@ public class MachineController {
 
     @Autowired
     private MachineAndDrinkService machineAndDrinkService; 
+    @Autowired
+    private BaseDataService baseDataService;
 
 
    @GetMapping("/machines")
@@ -90,7 +93,9 @@ public class MachineController {
             machine.setMachineName(machine_name);
             machine.setLocation(location);
             // 暫時固定 region_id = 1，實際應根據 region_name 從資料庫查詢 region_id
-            machine.setRegionId(1L);
+            // 根據 region_name 查詢 region_id
+            Long regionId = baseDataService.getRegionIdByName(region_name);
+            machine.setRegionId(regionId);
             
             VendingMachine saved = machineAndDrinkService.createMachine(machine);
             

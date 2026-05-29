@@ -23,19 +23,46 @@ async function renderSales(area, selectedRegion = 'all') {
     if (USE_MOCK) {
         topDrinks    = MOCK.topDrinks;
         salesSummary = MOCK.salesSummary;
-        // 假資料的地區選項
         regions = [{ region_id: '文山區', region_name: '文山區' }, { region_id: '信義區', region_name: '信義區' }];
     } else {
-        // 2. 呼叫 API：這裡多加一個抓取「所有地區」的 API 來產生選單
-        // 假設你後端有寫好 GET /regions 的 API (從你之前的截圖看到你有 RegionDao)
-        const [tRes, sRes, rRes] = await Promise.all([
-            apiFetch('GET', topDrinksUrl),
-            apiFetch('GET', summaryUrl),
-            apiFetch('GET', '/regions') // 獲取地區清單
-        ]);
-        topDrinks    = (await tRes.json()).data;
-        salesSummary = (await sRes.json()).data;
-        regions      = (await rRes.json()).data; 
+        try {
+            // 嘗試用後端 API
+            const rRes = await apiFetch('GET', '/regions');
+            const regionsData = await rRes.json();
+            regions = Array.isArray(regionsData) ? regionsData.map(r => ({ region_id: r.name, region_name: r.name })) : [];
+
+            // 取得銷售資料
+            const sRes = await apiFetch('GET', '/sales-records');
+            if (!sRes.ok) throw new Error('API 返回錯誤');
+            const salesData = (await sRes.json()).data || [];
+
+            // 從銷售紀錄計算 topDrinks
+            const drinkMap = {};
+            salesData.forEach(s => {
+                const key = s.drinkName || s.drink_name || 'unknown';
+                if (!drinkMap[key]) drinkMap[key] = { drink_name: key, total_quantity: 0, total_revenue: 0 };
+                drinkMap[key].total_quantity += (s.quantity || 1);
+                drinkMap[key].total_revenue += (s.totalPrice || s.total_price || 0);
+            });
+            topDrinks = Object.values(drinkMap).sort((a, b) => b.total_quantity - a.total_quantity).slice(0, 5);
+
+            // 計算每日摘要
+            const dayMap = {};
+            salesData.forEach(s => {
+                const date = (s.saleTime || s.sale_time || '').substring(0, 10);
+                if (!dayMap[date]) dayMap[date] = { label: date.substring(5), total_quantity: 0, total_revenue: 0 };
+                dayMap[date].total_quantity += (s.quantity || 1);
+                dayMap[date].total_revenue += (s.totalPrice || s.total_price || 0);
+            });
+            salesSummary = Object.values(dayMap).sort((a, b) => a.label.localeCompare(b.label));
+
+            if (topDrinks.length === 0) throw new Error('無資料');
+        } catch (e) {
+            console.warn('銷售分析 API 不可用，使用 mock data', e);
+            topDrinks    = MOCK.topDrinks;
+            salesSummary = MOCK.salesSummary;
+            regions = [{ region_id: '文山區', region_name: '文山區' }, { region_id: '信義區', region_name: '信義區' }];
+        }
     }
 
     const maxQty = topDrinks.length ? Math.max(...topDrinks.map(d => d.total_quantity)) : 1;
