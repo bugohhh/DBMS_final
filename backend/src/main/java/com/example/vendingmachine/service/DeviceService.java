@@ -35,6 +35,7 @@ public class DeviceService {
                 request.getMachineId(),
                 request.getDrinkId(),
                 request.getQuantity(),
+                request.getPrice(),
                 request.getSaleTime()
         );
 

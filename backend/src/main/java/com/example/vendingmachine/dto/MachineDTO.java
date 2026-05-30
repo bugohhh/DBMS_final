@@ -1,6 +1,7 @@
 package com.example.vendingmachine.dto;
 
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class MachineDTO {
     private Long machine_id;
@@ -8,6 +9,8 @@ public class MachineDTO {
     private String region_name;
     private Long region_id;
     private String status;
+    @JsonProperty("machine_type")
+    private String machine_type;
     private List<InventoryItemDTO> inventory;
     private String reported_status;
 
@@ -20,6 +23,10 @@ public class MachineDTO {
     public void setRegion_name(String region_name) { this.region_name = region_name; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getMachine_type() { return machine_type; }
+    public void setMachine_type(String machine_type) { this.machine_type = machine_type; }
+    @JsonProperty("machineType")
+    public String getMachineType() { return machine_type; }
     public List<InventoryItemDTO> getInventory() { return inventory; }
     public Long getRegion_id() { return region_id; }
     public void setRegion_id(Long region_id) { this.region_id = region_id; }

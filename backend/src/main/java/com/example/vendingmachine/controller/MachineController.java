@@ -39,6 +39,7 @@ public class MachineController {
                 dto.setMachine_id(machine.getMachineId());
                 dto.setMachine_name(machine.getMachineName());
                 dto.setRegion_id(machine.getRegionId());
+                dto.setMachine_type(machine.getMachineType());
                 dto.setRegion_name(machineAndDrinkService.getRegionNameById(machine.getRegionId()));
                 dto.setReported_status(machine.getStatus());
 
@@ -81,6 +82,7 @@ public class MachineController {
             String machine_name = (String) request.get("machine_name");
             String location = (String) request.get("location");
             String region_name = (String) request.get("region_name");
+            String machine_type = request.get("machine_type") == null ? "Smart" : String.valueOf(request.get("machine_type"));
             
             if (machine_name == null || region_name == null) {
                 return ResponseEntity.badRequest().body(
@@ -92,6 +94,7 @@ public class MachineController {
             VendingMachine machine = new VendingMachine();
             machine.setMachineName(machine_name);
             machine.setLocation(location);
+            machine.setMachineType(machine_type);
             // 暫時固定 region_id = 1，實際應根據 region_name 從資料庫查詢 region_id
             // 根據 region_name 查詢 region_id
             Long regionId = baseDataService.getRegionIdByName(region_name);

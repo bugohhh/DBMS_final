@@ -1,6 +1,7 @@
 package com.example.vendingmachine.dao;
 
 import com.example.vendingmachine.model.Drink;
+import com.example.vendingmachine.dto.DrinkInventorySummaryDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -32,8 +33,30 @@ public class DrinkDao {
 
 
     public List<Drink> findAll() {
-        String sql = "SELECT drink_id, drink_name, brand, category, size, status FROM Drink";
+        String sql = "SELECT drink_id, drink_name, brand, category, size, status FROM Drink ORDER BY drink_id";
         return jdbcTemplate.query(sql, drinkRowMapper);
+    }
+
+    public List<DrinkInventorySummaryDTO> findAllWithInventoryQuantity() {
+        String sql = """
+                SELECT d.drink_id, d.drink_name, d.brand, d.category, d.size, d.status,
+                       COALESCE(SUM(i.quantity), 0) AS drink_quantity
+                FROM Drink d
+                LEFT JOIN Inventory i ON d.drink_id = i.drink_id
+                GROUP BY d.drink_id, d.drink_name, d.brand, d.category, d.size, d.status
+                ORDER BY d.drink_id
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            DrinkInventorySummaryDTO dto = new DrinkInventorySummaryDTO();
+            dto.setDrinkId(rs.getLong("drink_id"));
+            dto.setDrinkName(rs.getString("drink_name"));
+            dto.setBrand(rs.getString("brand"));
+            dto.setCategory(rs.getString("category"));
+            dto.setSize(rs.getString("size"));
+            dto.setStatus(rs.getString("status"));
+            dto.setDrinkQuantity(rs.getLong("drink_quantity"));
+            return dto;
+        });
     }
 
 
@@ -63,7 +86,17 @@ public class DrinkDao {
     public Drink save(Drink drink) {
         if (drink.getDrinkId() == null) {
             String sql = "INSERT INTO Drink (drink_name, brand, category, size, status) VALUES (?, ?, ?, ?, ?)";
-            jdbcTemplate.update(sql, drink.getDrinkName(), drink.getBrand(), drink.getCategory(), drink.getSize(), drink.getStatus());
+            org.springframework.jdbc.support.GeneratedKeyHolder keyHolder = new org.springframework.jdbc.support.GeneratedKeyHolder();
+            jdbcTemplate.update(connection -> {
+                java.sql.PreparedStatement ps = connection.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS);
+                ps.setString(1, drink.getDrinkName());
+                ps.setString(2, drink.getBrand());
+                ps.setString(3, drink.getCategory());
+                ps.setString(4, drink.getSize());
+                ps.setString(5, drink.getStatus());
+                return ps;
+            }, keyHolder);
+            if (keyHolder.getKey() != null) drink.setDrinkId(keyHolder.getKey().longValue());
             return drink;
         } else {
             String sql = "UPDATE Drink SET drink_name = ?, brand = ?, category = ?, size = ?, status = ? WHERE drink_id = ?";
@@ -73,8 +106,19 @@ public class DrinkDao {
     }
 
 
-    public void deleteById(Long id) {
+    public int countReferences(Long id) {
+        String sql = """
+                SELECT
+                    (SELECT COUNT(*) FROM Inventory WHERE drink_id = ?) +
+                    (SELECT COUNT(*) FROM SalesRecord WHERE drink_id = ?) +
+                    (SELECT COUNT(*) FROM RefillDetail WHERE drink_id = ?)
+                """;
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id, id, id);
+        return count == null ? 0 : count;
+    }
+
+    public boolean deleteById(Long id) {
         String sql = "DELETE FROM Drink WHERE drink_id = ?";
-        jdbcTemplate.update(sql, id);
+        return jdbcTemplate.update(sql, id) > 0;
     }
 }

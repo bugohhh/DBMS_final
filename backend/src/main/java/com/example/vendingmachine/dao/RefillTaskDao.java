@@ -121,14 +121,39 @@ public class RefillTaskDao {
         return updated > 0;
     }
 
+    public Optional<Long> findTeamRegionId(Long teamId) {
+        String sql = "SELECT region_id FROM Team WHERE team_id = ?";
+        List<Long> result = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            long value = rs.getLong("region_id");
+            return rs.wasNull() ? null : value;
+        }, teamId);
+        return result.stream().findFirst();
+    }
+
     public void createRefillDetail(Long refillTaskId, Long machineId, Long drinkId, Integer actualQty) {
-        String sql = "INSERT INTO RefillDetail (refilltask_id, machine_id, drink_id, actual_quantity, refill_time) VALUES (?, ?, ?, ?, NOW())";
-        jdbcTemplate.update(sql, refillTaskId, machineId, drinkId, actualQty);
+        createRefillDetail(refillTaskId, machineId, drinkId, null, actualQty);
+    }
+
+    public void createRefillDetail(Long refillTaskId, Long machineId, Long drinkId, Integer plannedQty, Integer actualQty) {
+        String sql = "INSERT INTO RefillDetail (refilltask_id, machine_id, drink_id, planned_quantity, actual_quantity, refill_time) VALUES (?, ?, ?, ?, ?, NOW())";
+        jdbcTemplate.update(sql, refillTaskId, machineId, drinkId, plannedQty, actualQty);
+    }
+
+    public List<java.util.Map<String, Object>> findDetailsByTaskId(Long refillTaskId) {
+        String sql = """
+                SELECT rd.refilldetail_id, rd.refilltask_id, rd.machine_id, rd.drink_id,
+                       d.drink_name, rd.planned_quantity, rd.actual_quantity, rd.refill_time
+                FROM RefillDetail rd
+                JOIN Drink d ON rd.drink_id = d.drink_id
+                WHERE rd.refilltask_id = ?
+                ORDER BY rd.refilldetail_id
+                """;
+        return jdbcTemplate.queryForList(sql, refillTaskId);
     }
 
     public RefillDetail updateRefillDetail(Long refillDetailsId, RefillDetail refillDetail) {
-        // Minimal implementation: update actual_quantity and last_restock
-        String sql = "UPDATE RefillDetail SET actual_quantity = ?, last_restock = NOW() WHERE refilldetails_id = ?";
+        // Minimal implementation: update actual_quantity and refill_time.
+        String sql = "UPDATE RefillDetail SET actual_quantity = ?, refill_time = NOW() WHERE refilldetail_id = ?";
         jdbcTemplate.update(sql, refillDetail.getActualQuantity(), refillDetailsId);
         return refillDetail;
     }

@@ -40,6 +40,7 @@ public class MachineAndDrinkService {
             dto.setDrink_id(rs.getLong("drink_id"));
             dto.setDrink_name(rs.getString("drink_name"));
             dto.setQuantity(rs.getInt("quantity"));
+            dto.setCapacity(rs.getInt("capacity"));
             return dto;
         }, machineId);
     }
@@ -51,18 +52,20 @@ public class MachineAndDrinkService {
     }
 
     public List<MachineDTO> getMachinesByStaffUserId(Long userId) {
-        String sql = "SELECT DISTINCT vm.machine_id, vm.machine_name, vm.status, vm.location, rg.region_name, rg.region_id " +
-                    "FROM VendingMachine vm " +
-                    "JOIN RefillTask rt ON vm.machine_id = rt.machine_id " +
-                    "JOIN Staff s ON rt.team_id = s.team_id " +
+        String sql = "SELECT DISTINCT vm.machine_id, vm.machine_name, vm.machine_type, vm.status, vm.location, rg.region_name, rg.region_id " +
+                    "FROM Staff s " +
+                    "JOIN Team t ON s.team_id = t.team_id " +
+                    "JOIN VendingMachine vm ON vm.region_id = t.region_id " +
                     "JOIN Region rg ON vm.region_id = rg.region_id " +
-                    "WHERE s.user_id = ?";
+                    "WHERE s.user_id = ? " +
+                    "ORDER BY vm.machine_id";
         List<MachineDTO> machines = jdbcTemplate.query(sql, (rs, rowNum) -> {
             MachineDTO dto = new MachineDTO();
             dto.setMachine_id(rs.getLong("machine_id"));
             dto.setMachine_name(rs.getString("machine_name"));
             dto.setRegion_name(rs.getString("region_name"));
             dto.setRegion_id(rs.getLong("region_id"));
+            dto.setMachine_type(rs.getString("machine_type"));
             dto.setReported_status(rs.getString("status"));
             return dto;
         }, userId);

@@ -6,7 +6,10 @@
 /**
  * 切換頁面
  */
+let currentTab = 'dashboard';
+
 function switchTab(tab) {
+    currentTab = tab;
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
     const el = document.getElementById('nav-' + tab);
     if (el) el.classList.add('active');
@@ -18,6 +21,12 @@ function switchTab(tab) {
     else if (tab === 'sales') renderSales(area);
     else if (tab === 'teams') renderTeams(area);
     else if (tab === 'users') renderUsers(area);
+    else if (tab === 'drinks') renderDrinks(area);
+}
+
+function refreshCurrentTab() {
+    switchTab(currentTab || 'dashboard');
+    showToast('🔄 數據已刷新');
 }
 
 /**
@@ -96,9 +105,9 @@ async function renderDashboard(area) {
 
 /**
  * 渲染帳號管理頁面
- * Manager 可在這裡替 staff 重設密碼。
+ * Manager 可搜尋 staff、查看 team，並建立新 staff 帳號。
  */
-async function renderUsers(area) {
+async function renderUsers(area, keyword = '') {
     const user = getCurrentUser();
     if (!user || user.user_type !== 'Manager') {
         area.innerHTML = '<div class="card" style="padding:24px;color:var(--danger)">權限不足，只有管理員可以管理帳號。</div>';
@@ -108,7 +117,8 @@ async function renderUsers(area) {
     area.innerHTML = loadingHTML('載入使用者名冊中...');
 
     try {
-        const res = await apiFetch('GET', '/auth/users');
+        const path = keyword ? `/auth/users?keyword=${encodeURIComponent(keyword)}` : '/auth/users';
+        const res = await apiFetch('GET', path);
         const data = await res.json();
         if (!data.success) {
             area.innerHTML = `<div class="card" style="padding:24px;color:var(--danger)">${data.message || '載入使用者失敗'}</div>`;
@@ -117,24 +127,31 @@ async function renderUsers(area) {
 
         const users = data.data || [];
         area.innerHTML = `
-            <div class="page-header">
-                <h2>帳號管理</h2>
-                <p>管理員可替補貨人員重設密碼；staff 不直接修改自己的密碼。</p>
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div><h2>帳號管理</h2><p>可搜尋使用者、查看 staff 所屬 team，並新增 staff 帳號。</p></div>
+                <button class="btn btn-primary" onclick="openCreateStaffModal()">+ 創建 Staff</button>
             </div>
             <div class="card">
+                <div style="display:flex;gap:8px;margin-bottom:16px;">
+                    <input type="text" id="user-search" placeholder="🔍 搜尋 ID、姓名、帳號、Team 或地區..." value="${keyword.replace(/"/g, '&quot;')}"
+                        onkeydown="if(event.key==='Enter')renderUsers(document.getElementById('main-content'), this.value)"
+                        style="flex:1;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:inherit;font-size:14px;" />
+                    <button class="btn btn-ghost" onclick="renderUsers(document.getElementById('main-content'), document.getElementById('user-search').value)">查詢</button>
+                </div>
                 <table>
-                    <thead><tr><th>User ID</th><th>姓名</th><th>角色</th><th>操作</th></tr></thead>
+                    <thead><tr><th>User ID</th><th>姓名</th><th>帳號</th><th>角色</th><th>Team</th><th>地區</th><th>操作</th></tr></thead>
                     <tbody>
                         ${users.map(u => `
                             <tr>
                                 <td style="font-family:var(--mono)">#${u.user_id}</td>
                                 <td style="font-weight:700">${u.user_name}</td>
+                                <td style="color:var(--muted)">${u.account || '—'}</td>
                                 <td>${u.user_type === 'Manager' ? '<span class="badge badge-ok">Manager</span>' : '<span class="badge badge-warn">Staff</span>'}</td>
-                                <td>
-                                    ${u.user_type === 'Staff'
-                                        ? `<button class="btn btn-primary btn-sm" onclick="resetStaffPassword(${u.user_id}, '${String(u.user_name).replace(/'/g, "\\'")}')">重設密碼</button>`
-                                        : '<span style="color:var(--muted);font-size:12px">—</span>'}
-                                </td>
+                                <td>${u.team_name || (u.team_id ? '第 ' + u.team_id + ' 組' : '—')}</td>
+                                <td>${u.region_name || '—'}</td>
+                                <td>${u.user_type === 'Staff'
+                                    ? `<button class="btn btn-primary btn-sm" onclick="resetStaffPassword(${u.user_id}, '${String(u.user_name).replace(/'/g, "\\'")}')">重設密碼</button>`
+                                    : '<span style="color:var(--muted);font-size:12px">—</span>'}</td>
                             </tr>`).join('')}
                     </tbody>
                 </table>
@@ -144,21 +161,34 @@ async function renderUsers(area) {
     }
 }
 
-async function resetStaffPassword(userId, userName) {
-    const newPassword = prompt(`請輸入 ${userName} 的新密碼`);
-    if (!newPassword) return;
-
+async function openCreateStaffModal() {
+    const select = document.getElementById('create-staff-team');
+    select.innerHTML = '<option value="">不分配班組</option>';
     try {
-        const res = await apiFetch('PUT', `/auth/users/${userId}/password`, { new_password: newPassword });
+        const res = await apiFetch('GET', '/teams');
         const data = await res.json();
-        if (data.success) {
-            showToast('✅ 密碼已重設');
-        } else {
-            showToast('❌ ' + (data.message || '重設失敗'));
-        }
-    } catch (e) {
-        showToast('❌ 無法連線至伺服器');
-    }
+        const teams = Array.isArray(data) ? data : (data.data || []);
+        select.innerHTML += teams.map(t => `<option value="${t.teamId}">${t.teamName || '第 ' + t.teamId + ' 組'}${t.regionName ? '（' + t.regionName + '）' : ''}</option>`).join('');
+    } catch(e) {}
+    openModal('modal-create-staff');
+}
+
+async function submitCreateStaff() {
+    const user_name = document.getElementById('create-staff-name').value.trim();
+    const account = document.getElementById('create-staff-account').value.trim();
+    const password = document.getElementById('create-staff-password').value.trim();
+    const team_id = document.getElementById('create-staff-team').value;
+    if (!user_name || !account || !password) { showToast('❌ 請填寫姓名、帳號與初始密碼'); return; }
+    try {
+        const res = await apiFetch('POST', '/auth/register', { user_name, account, password, team_id: team_id ? Number(team_id) : null });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || '建立失敗');
+        showToast('✅ Staff 已建立');
+        closeModal('modal-create-staff');
+        ['create-staff-name','create-staff-account','create-staff-password'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('create-staff-team').value = '';
+        switchTab('users');
+    } catch(e) { showToast('❌ ' + e.message); }
 }
 
 /**

@@ -1,10 +1,15 @@
 package com.example.vendingmachine.controller;
 
 import com.example.vendingmachine.dto.ApiResponse;
+import com.example.vendingmachine.dto.DrinkInventorySummaryDTO;
 import com.example.vendingmachine.model.Drink;
 import com.example.vendingmachine.service.DrinkService;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +29,27 @@ public class DrinkController {
     @GetMapping("/public/drinks")
     public ApiResponse<List<Drink>> getAllDrinks() {
         return ApiResponse.success("Drink list", drinkService.getActiveDrinks());
+    }
+
+    @GetMapping("/drinks")
+    public ApiResponse<List<DrinkInventorySummaryDTO>> getDrinkInventorySummary() {
+        return ApiResponse.success("Drink inventory summary", drinkService.getDrinkInventorySummary());
+    }
+
+    @PostMapping("/drinks")
+    public ApiResponse<Drink> createDrink(@RequestBody Drink drink) {
+        return ApiResponse.success("Drink created", drinkService.createDrink(drink));
+    }
+
+    @PutMapping("/drinks/{drink_id}")
+    public ApiResponse<Drink> updateDrink(@PathVariable("drink_id") Long drinkId, @RequestBody Drink drink) {
+        return ApiResponse.success("Drink updated", drinkService.updateDrink(drinkId, drink));
+    }
+
+    @DeleteMapping("/drinks/{drink_id}")
+    public ApiResponse<Void> deleteDrink(@PathVariable("drink_id") Long drinkId) {
+        drinkService.deleteDrink(drinkId);
+        return ApiResponse.success("Drink deleted", null);
     }
 
     @GetMapping("/drinks/by-name")

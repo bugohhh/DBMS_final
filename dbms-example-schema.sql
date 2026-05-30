@@ -134,6 +134,7 @@ CREATE TABLE `SalesRecord` (
   `machine_id` int NOT NULL,
   `drink_id` int NOT NULL,
   `quantity` int NOT NULL,
+  `price` decimal(10,2) DEFAULT 0,
   `sale_time` datetime DEFAULT NULL,
   `record_source` enum('Auto','Manual') DEFAULT NULL,
   PRIMARY KEY (`sales_id`),
@@ -185,7 +186,7 @@ CREATE TABLE `VendingMachine` (
   PRIMARY KEY (`machine_id`),
   KEY `region_id` (`region_id`),
   CONSTRAINT `vendingmachine_ibfk_1` FOREIGN KEY (`region_id`) REFERENCES `Region` (`region_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 INSERT INTO `Account` (`user_id`, `account`, `password_hash`, `user_name`, `user_type`) VALUES
 (2, 'manager01', 'admin123', '王小明', 'Manager'),
@@ -194,9 +195,9 @@ INSERT INTO `Account` (`user_id`, `account`, `password_hash`, `user_name`, `user
 
 INSERT INTO `Drink` (`drink_id`, `drink_name`, `brand`, `category`, `size`, `status`) VALUES
 (1, '可口可樂 330ml', '可口可樂', '碳酸飲料', '330ml', 'Active'),
-(2, '原萃綠茶 500ml', '原萃', '茶飲料', '500ml', 'Active'),
-(3, '美粒果柳橙 350ml', '美粒果', '果汁', '350ml', 'Active'),
-(4, '雀巢咖啡 250ml', '雀巢', '咖啡', '250ml', 'Active');
+(2, '礦泉水 500ml', '悅氏', '水', '500ml', 'Active'),
+(3, '伯朗咖啡 350ml', '伯朗', '咖啡', '350ml', 'Active'),
+(4, '麥香奶茶 250ml', '統一', '茶飲', '250ml', 'Active');
 
 INSERT INTO `Inventory` (`inventory_id`, `machine_id`, `drink_id`, `quantity`, `price`, `threshold`, `capacity`, `last_restock`, `update_source`) VALUES
 (31, 3, 1, 18, 30.00, 5, 30, NULL, NULL),
@@ -226,7 +227,10 @@ INSERT INTO `Inventory` (`inventory_id`, `machine_id`, `drink_id`, `quantity`, `
 (58, 17, 1, 3, 30.00, 5, 30, '2026-05-27 17:52:27', 'Manual'),
 (59, 17, 2, 3, 30.00, 5, 30, '2026-05-27 17:52:27', 'Manual'),
 (60, 17, 3, 3, 30.00, 5, 30, '2026-05-27 17:52:27', 'Manual'),
-(61, 17, 4, 3, 30.00, 5, 30, '2026-05-27 17:52:27', 'Manual');
+(61, 17, 4, 3, 30.00, 5, 30, '2026-05-27 17:52:27', 'Manual'),
+(62, 18, 1, 12, 30.00, 5, 30, NOW(), 'Manual'),
+(63, 18, 2, 8, 25.00, 5, 30, NOW(), 'Manual'),
+(64, 18, 4, 6, 35.00, 5, 30, NOW(), 'Manual');
 
 INSERT INTO `LoginSession` (`session_id`, `user_id`, `refresh_token_hash`, `issued_at`, `expires_at`, `revoked_at`, `ip_address`, `user_agent`) VALUES
 (1, 2, 'e2008528-0446-47a7-a2f5-95b74aae08ac', '2026-05-21 17:31:33', '2026-05-21 19:31:33', NULL, NULL, NULL),
@@ -441,7 +445,8 @@ INSERT INTO `VendingMachine` (`machine_id`, `machine_name`, `machine_type`, `loc
 (14, 'z14', 'Smart', '傷學院', NULL, '運行', 1),
 (15, 'z15', 'Smart', '傷學院ㄧ', NULL, NULL, 1),
 (16, 'z16', 'Smart', '發學院', NULL, NULL, 1),
-(17, 'z17', 'Smart', '傳院', NULL, NULL, 1);
+(17, 'z17', 'Smart', '傳院', NULL, NULL, 1),
+(18, 'TR-TEST-政大傳統機', 'Traditional', 'NCCU 綜合院館 1F', CURDATE(), '運行', 2);
 
 
 

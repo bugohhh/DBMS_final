@@ -34,10 +34,11 @@ public class AuthController {
         return response;
     }
     @PostMapping("/register")
-public Map<String, Object> register(@RequestBody Map<String, String> request) {
-    String userName = request.get("user_name");
-    String account = request.get("account");
-    String password = request.get("password");
+public Map<String, Object> register(@RequestBody Map<String, Object> request) {
+    String userName = request.get("user_name") == null ? null : String.valueOf(request.get("user_name"));
+    String account = request.get("account") == null ? null : String.valueOf(request.get("account"));
+    String password = request.get("password") == null ? null : String.valueOf(request.get("password"));
+    Long teamId = request.get("team_id") == null || String.valueOf(request.get("team_id")).isBlank() ? null : Long.valueOf(String.valueOf(request.get("team_id")));
 
     Map<String, Object> response = new HashMap<>();
     if (userName == null || account == null || password == null) {
@@ -47,7 +48,7 @@ public Map<String, Object> register(@RequestBody Map<String, String> request) {
     }
 
     try {
-        Map<String, Object> result = authService.registerStaff(userName, account, password);
+        Map<String, Object> result = authService.registerStaff(userName, account, password, teamId);
         response.put("success", true);
         response.put("message", "註冊成功");
         response.put("data", result);
@@ -95,7 +96,8 @@ public Map<String, Object> register(@RequestBody Map<String, String> request) {
 
     // 3. 查詢所有使用者 (GET /api/users) -> 規格書第3.2節管理者功能
     @GetMapping("/users")
-    public Map<String, Object> getAllUsers(@RequestHeader("Authorization") String token) {
+    public Map<String, Object> getAllUsers(@RequestHeader("Authorization") String token,
+                                           @RequestParam(value = "keyword", required = false) String keyword) {
         String pureToken = token.replace("Bearer ", "");
         
         Map<String, Object> response = new HashMap<>();
@@ -108,7 +110,9 @@ public Map<String, Object> register(@RequestBody Map<String, String> request) {
         }
 
         // 是經理，放行去撈全公司名冊
-        java.util.List<Map<String, Object>> users = authService.fetchAllUsers();
+        java.util.List<Map<String, Object>> users = (keyword == null || keyword.isBlank())
+            ? authService.fetchAllUsers()
+            : authService.searchUsers(keyword);
         response.put("success", true);
         response.put("message", "Users retrieved successfully");
         response.put("data", users);

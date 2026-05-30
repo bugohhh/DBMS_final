@@ -33,6 +33,10 @@ public class AuthService {
     }
     //補貨人員註冊
     public Map<String, Object> registerStaff(String userName, String account, String password) {
+        return registerStaff(userName, account, password, null);
+    }
+
+    public Map<String, Object> registerStaff(String userName, String account, String password, Long teamId) {
     // 檢查帳號是否已存在
     int count = jdbcTemplate.queryForObject(
         "SELECT COUNT(*) FROM Account WHERE account = ?", Integer.class, account);
@@ -57,12 +61,17 @@ public class AuthService {
         userId, account, password, userName);
 
     // 3. 插入 Staff
-    jdbcTemplate.update("INSERT INTO Staff (user_id) VALUES (?)", userId);
+    if (teamId != null) {
+        jdbcTemplate.update("INSERT INTO Staff (user_id, team_id) VALUES (?, ?)", userId, teamId);
+    } else {
+        jdbcTemplate.update("INSERT INTO Staff (user_id) VALUES (?)", userId);
+    }
 
     Map<String, Object> result = new HashMap<>();
         result.put("user_id", userId);
         result.put("user_name", userName);
         result.put("account", account);
+        result.put("team_id", teamId);
         return result;
     }
 
@@ -149,8 +158,37 @@ public class AuthService {
 
     // 3. 撈名冊大腦：跑簡單的 SELECT 撈出全公司 User 列表
     public java.util.List<Map<String, Object>> fetchAllUsers() {
-        String sql = "SELECT `user_id`, `user_name`, `user_type` FROM `User`";
+        String sql = """
+                SELECT u.user_id, u.user_name, u.user_type, a.account,
+                       s.team_id, t.team_name, t.region_id, r.region_name
+                FROM `User` u
+                LEFT JOIN `Account` a ON u.user_id = a.user_id
+                LEFT JOIN Staff s ON u.user_id = s.user_id
+                LEFT JOIN Team t ON s.team_id = t.team_id
+                LEFT JOIN Region r ON t.region_id = r.region_id
+                ORDER BY u.user_id
+                """;
         return jdbcTemplate.queryForList(sql);
+    }
+
+    public java.util.List<Map<String, Object>> searchUsers(String keyword) {
+        String like = "%" + (keyword == null ? "" : keyword.trim()) + "%";
+        String sql = """
+                SELECT u.user_id, u.user_name, u.user_type, a.account,
+                       s.team_id, t.team_name, t.region_id, r.region_name
+                FROM `User` u
+                LEFT JOIN `Account` a ON u.user_id = a.user_id
+                LEFT JOIN Staff s ON u.user_id = s.user_id
+                LEFT JOIN Team t ON s.team_id = t.team_id
+                LEFT JOIN Region r ON t.region_id = r.region_id
+                WHERE CAST(u.user_id AS CHAR) LIKE ?
+                   OR LOWER(u.user_name) LIKE LOWER(?)
+                   OR LOWER(COALESCE(a.account, '')) LIKE LOWER(?)
+                   OR LOWER(COALESCE(t.team_name, '')) LIKE LOWER(?)
+                   OR LOWER(COALESCE(r.region_name, '')) LIKE LOWER(?)
+                ORDER BY u.user_id
+                """;
+        return jdbcTemplate.queryForList(sql, like, like, like, like, like);
     }
 
     // 4. 修改密碼大腦：先比對舊密碼，對了才改新密碼
@@ -176,7 +214,16 @@ public class AuthService {
 
     // 6. 查單一使用者大腦
     public Map<String, Object> fetchUserById(int userId) {
-        String sql = "SELECT `user_id`, `user_name`, `user_type` FROM `User` WHERE `user_id` = ?";
+        String sql = """
+                SELECT u.user_id, u.user_name, u.user_type, a.account,
+                       s.team_id, t.team_name, t.region_id, r.region_name
+                FROM `User` u
+                LEFT JOIN `Account` a ON u.user_id = a.user_id
+                LEFT JOIN Staff s ON u.user_id = s.user_id
+                LEFT JOIN Team t ON s.team_id = t.team_id
+                LEFT JOIN Region r ON t.region_id = r.region_id
+                WHERE u.user_id = ?
+                """;
         try {
             return jdbcTemplate.queryForMap(sql, userId);
         } catch (DataAccessException e) {

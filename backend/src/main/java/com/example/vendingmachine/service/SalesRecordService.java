@@ -27,12 +27,28 @@ public class SalesRecordService {
     }
 
     public SalesRecord createDeviceSalesRecord(Long machineId, Long drinkId, Integer quantity, java.time.LocalDateTime saleTime) {
+        return createDeviceSalesRecord(machineId, drinkId, quantity, null, saleTime);
+    }
+
+    public SalesRecord createDeviceSalesRecord(Long machineId, Long drinkId, Integer quantity, java.math.BigDecimal price, java.time.LocalDateTime saleTime) {
         SalesRecord record = new SalesRecord();
         record.setMachineId(machineId);
         record.setDrinkId(drinkId);
         record.setQuantity(quantity);
+        record.setPrice(price);
         record.setSaleTime(saleTime);
         record.setRecordSource("Auto");
+        return createSalesRecord(record);
+    }
+
+    public SalesRecord createManualSalesRecord(Long machineId, Long drinkId, Integer quantity, java.math.BigDecimal price) {
+        SalesRecord record = new SalesRecord();
+        record.setMachineId(machineId);
+        record.setDrinkId(drinkId);
+        record.setQuantity(quantity);
+        record.setPrice(price);
+        record.setSaleTime(java.time.LocalDateTime.now());
+        record.setRecordSource("Manual");
         return createSalesRecord(record);
     }
 

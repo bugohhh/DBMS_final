@@ -40,6 +40,12 @@ public class RefillTaskController {
         return ApiResponse.success("Refill task", refillTaskService.getRefillTasksByRefillTaskId(refillTaskId));
     }
 
+    @GetMapping("/refill-tasks/{refilltask_id}/details")
+    public ApiResponse<List<Map<String, Object>>> getRefillDetails(@PathVariable("refilltask_id") Long refillTaskId,
+                                                                    @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return ApiResponse.success("Refill details", refillTaskService.getRefillDetails(refillTaskId));
+    }
+
     @PutMapping("/refill-tasks/{refilltask_id}/status")
     public ApiResponse<RefillTask> updateRefillTask(@PathVariable("refilltask_id") Long refillTaskId,
                                                    @RequestBody RefillTask refillTask,

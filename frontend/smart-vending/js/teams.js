@@ -58,20 +58,22 @@ async function renderTeams(area) {
         </div>
 
         <!-- 班組管理 -->
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;">
             <div style="font-weight:700;font-size:18px;">👥 班組管理</div>
-            <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-team')">+ 新增班組</button>
+            <input type="text" id="team-search" placeholder="🔍 搜尋班組或地區..." oninput="filterTeams()"
+                style="flex:1;max-width:320px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;" />
+            <button class="btn btn-primary btn-sm" onclick="openAddTeamModal()">+ 新增班組</button>
         </div>
 
         ${teams.length === 0
             ? '<div class="card" style="text-align:center;padding:48px;color:var(--muted);">尚無班組資料</div>'
             : teams.map(team => `
-                <div class="card" style="margin-bottom:16px;">
+                <div class="card team-card" style="margin-bottom:16px;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
                         <div>
                             <h3 style="font-size:16px;font-weight:700;">第 ${team.teamId} 組</h3>
                             <div style="font-size:12px;color:var(--muted);margin-top:4px;">
-                                ${team.teamName || ''}
+                                ${team.teamName || ''}${team.regionName ? '｜地區：' + team.regionName : ''}
                             </div>
                         </div>
                         <span class="badge badge-ok">${team.staff.length} 名成員</span>
@@ -126,15 +128,33 @@ async function deleteRegion(regionId) {
 }
 
 // 新增班組
+async function openAddTeamModal() {
+    const select = document.getElementById('new-team-region');
+    select.innerHTML = '<option value="">-- 選擇負責地區 --</option>';
+    try {
+        const res = await apiFetch('GET', '/regions');
+        const data = await res.json();
+        const regions = Array.isArray(data) ? data : (data.data || []);
+        select.innerHTML += regions.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+    } catch(e) {
+        select.innerHTML = '<option value="">地區載入失敗</option>';
+    }
+    openModal('modal-add-team');
+}
+
 async function submitAddTeam() {
     const name = document.getElementById('new-team-name').value.trim();
+    const regionId = document.getElementById('new-team-region').value;
     if (!name) { showToast('❌ 請填寫班組名稱'); return; }
+    if (!regionId) { showToast('❌ 請選擇負責地區'); return; }
     try {
-        const res = await apiFetch('POST', '/teams', { teamName: name });
+        const res = await apiFetch('POST', '/teams', { teamName: name, regionId: Number(regionId), teamStatus: 'Active' });
         if (!res.ok) throw new Error('API 返回錯誤: ' + res.status);
+        teamsCache = null;
         showToast('✅ 班組已新增！');
         closeModal('modal-add-team');
         document.getElementById('new-team-name').value = '';
+        document.getElementById('new-team-region').value = '';
         switchTab('teams');
     } catch (e) {
         showToast('❌ 新增失敗：' + e.message);
@@ -186,8 +206,16 @@ async function removeStaffFromTeam(teamId, staffId) {
         const res = await apiFetch('DELETE', `/teams/${teamId}/staff/${staffId}`);
         if (!res.ok) throw new Error('API 返回錯誤: ' + res.status);
         showToast('✅ 成員已移除');
+        teamsCache = null;
         switchTab('teams');
     } catch (e) {
         showToast('❌ 移除失敗：' + e.message);
     }
+}
+
+function filterTeams() {
+    const keyword = document.getElementById('team-search')?.value.toLowerCase() || '';
+    document.querySelectorAll('.team-card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(keyword) ? '' : 'none';
+    });
 }

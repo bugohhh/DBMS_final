@@ -13,6 +13,9 @@ public class RegionDrinkSalesSummaryDTO {
     @JsonProperty("total_quantity")
     private Long totalQuantity;
 
+    @JsonProperty("total_revenue")
+    private java.math.BigDecimal totalRevenue;
+
     public Long getDrinkId() {
         return drinkId;
     }
@@ -35,5 +38,13 @@ public class RegionDrinkSalesSummaryDTO {
 
     public void setTotalQuantity(Long totalQuantity) {
         this.totalQuantity = totalQuantity;
+    }
+
+    public java.math.BigDecimal getTotalRevenue() {
+        return totalRevenue;
+    }
+
+    public void setTotalRevenue(java.math.BigDecimal totalRevenue) {
+        this.totalRevenue = totalRevenue;
     }
 }

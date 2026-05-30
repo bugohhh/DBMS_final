@@ -5,6 +5,7 @@ public class Team {
     private String teamName;
     private String teamStatus;
     private Long regionId;
+    private String regionName;
 
     public Long getTeamId() { return teamId; }
     public void setTeamId(Long teamId) { this.teamId = teamId; }
@@ -17,4 +18,7 @@ public class Team {
 
     public Long getRegionId() { return regionId; }
     public void setRegionId(Long regionId) { this.regionId = regionId; }
+
+    public String getRegionName() { return regionName; }
+    public void setRegionName(String regionName) { this.regionName = regionName; }
 }

@@ -7,6 +7,7 @@ import com.example.vendingmachine.model.RefillDetail;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -17,14 +18,17 @@ public class RefillTaskService {
 
     private final RefillTaskDao refillTaskDao;
     private final InventoryService inventoryService;
+    private final SalesRecordService salesRecordService;
 
-    public RefillTaskService(RefillTaskDao refillTaskDao, InventoryService inventoryService) {
+    public RefillTaskService(RefillTaskDao refillTaskDao, InventoryService inventoryService, SalesRecordService salesRecordService) {
         this.refillTaskDao = refillTaskDao;
         this.inventoryService = inventoryService;
+        this.salesRecordService = salesRecordService;
     }
 
     public RefillTask createRefillTask(RefillTask refillTask) {
         validateRefillTaskForWrite(refillTask);
+        validateTeamBelongsToRegion(refillTask.getTeamId(), refillTask.getRegionId());
         return refillTaskDao.create(refillTask);
     }
 
@@ -66,8 +70,8 @@ public class RefillTaskService {
         if (refillTaskId == null || teamId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refill task ID and team ID are required");
         }
-        // 更新 RefillTask 的 team_id 和狀態
         RefillTask task = getRefillTasksByRefillTaskId(refillTaskId);
+        validateTeamBelongsToRegion(teamId, task.getRegionId());
         task.setTeamId(teamId);
         task.setStatus("Assigned");
         refillTaskDao.updateTeamAndStatus(refillTaskId, teamId, "Assigned");
@@ -111,21 +115,49 @@ public class RefillTaskService {
         refillTaskDao.createRefillDetail(refillTaskId, machineId, drinkId, actualQty);
     }
 
+    @Transactional
     public RefillTask completeWithItems(Long refillTaskId, Long machineId, List<Map<String, Object>> items) {
-        // 更新每個飲料的庫存
-        if (machineId != null && items != null) {
+        RefillTask task = getRefillTasksByRefillTaskId(refillTaskId);
+        Long targetMachineId = machineId != null ? machineId : task.getMachineId();
+        if (targetMachineId != null && items != null) {
             for (Map<String, Object> item : items) {
                 Long drinkId = ((Number) item.get("drink_id")).longValue();
-                Integer actualQty = ((Number) item.get("actual_quantity")).intValue();
-                if (actualQty > 0) {
-                    // 取得現有庫存數量再加上補貨數量
-                    inventoryService.addInventoryQuantity(machineId, drinkId, actualQty);
-                    // 儲存 RefillDetail
-                    refillTaskDao.createRefillDetail(refillTaskId, machineId, drinkId, actualQty);
+                Integer refillQty = item.get("actual_quantity") == null ? 0 : ((Number) item.get("actual_quantity")).intValue();
+                Integer beforeQty = item.get("before_quantity") == null ? null : ((Number) item.get("before_quantity")).intValue();
+                if (refillQty < 0 || (beforeQty != null && beforeQty < 0)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "quantities must be non-negative");
+                }
+
+                if (beforeQty != null) {
+                    Integer previousSystemQty = inventoryService.getInventoryByMachineIdAndDrinkId(targetMachineId, drinkId).getQuantity();
+                    int soldQty = Math.max(previousSystemQty - beforeQty, 0);
+                    if (soldQty > 0) {
+                        salesRecordService.createManualSalesRecord(
+                                targetMachineId, drinkId, soldQty, inventoryService.getInventoryPrice(targetMachineId, drinkId));
+                    }
+                    inventoryService.setInventoryQuantityAfterManualRestock(targetMachineId, drinkId, beforeQty + refillQty);
+                    refillTaskDao.createRefillDetail(refillTaskId, targetMachineId, drinkId, beforeQty, refillQty);
+                } else if (refillQty > 0) {
+                    inventoryService.addInventoryQuantity(targetMachineId, drinkId, refillQty);
+                    refillTaskDao.createRefillDetail(refillTaskId, targetMachineId, drinkId, null, refillQty);
                 }
             }
         }
-        // 更新任務狀態
         return updateRefillTaskStatus(refillTaskId, "Completed");
+    }
+
+    public List<Map<String, Object>> getRefillDetails(Long refillTaskId) {
+        if (refillTaskId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refill task ID is required");
+        }
+        return refillTaskDao.findDetailsByTaskId(refillTaskId);
+    }
+
+    private void validateTeamBelongsToRegion(Long teamId, Long regionId) {
+        Long teamRegionId = refillTaskDao.findTeamRegionId(teamId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team not found"));
+        if (teamRegionId == null || !teamRegionId.equals(regionId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team can only be assigned to refill tasks in its own region");
+        }
     }
 }

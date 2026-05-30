@@ -8,6 +8,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -32,6 +33,10 @@ public class SalesRecordDao {
             record.setMachineId(rs.getLong("machine_id"));
             record.setDrinkId(rs.getLong("drink_id"));
             record.setQuantity(rs.getInt("quantity"));
+            record.setPrice(rs.getBigDecimal("price"));
+            try {
+                record.setDrinkName(rs.getString("drink_name"));
+            } catch (SQLException ignored) {}
 
             Timestamp timestamp = rs.getTimestamp("sale_time");
             if (timestamp != null) {
@@ -43,9 +48,10 @@ public class SalesRecordDao {
     };
 
     public SalesRecord create(SalesRecord record) {
+        BigDecimal price = record.getPrice() != null ? record.getPrice() : findInventoryPrice(record.getMachineId(), record.getDrinkId());
         String sql = """
-                INSERT INTO SalesRecord (machine_id, drink_id, quantity, sale_time, record_source)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO SalesRecord (machine_id, drink_id, quantity, price, sale_time, record_source)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """;
         Timestamp timestamp = record.getSaleTime() != null
                 ? Timestamp.valueOf(record.getSaleTime())
@@ -58,50 +64,63 @@ public class SalesRecordDao {
             ps.setLong(1, record.getMachineId());
             ps.setLong(2, record.getDrinkId());
             ps.setInt(3, record.getQuantity());
-            ps.setTimestamp(4, timestamp);
-            ps.setString(5, recordSource);
+            ps.setBigDecimal(4, price);
+            ps.setTimestamp(5, timestamp);
+            ps.setString(6, recordSource);
             return ps;
         }, keyHolder);
 
         if (keyHolder.getKey() != null) {
             record.setSalesId(keyHolder.getKey().longValue());
         }
+        record.setPrice(price);
         record.setSaleTime(timestamp.toLocalDateTime());
         record.setRecordSource(recordSource);
         return record;
     }
 
+    private BigDecimal findInventoryPrice(Long machineId, Long drinkId) {
+        List<BigDecimal> prices = jdbcTemplate.query(
+                "SELECT price FROM Inventory WHERE machine_id = ? AND drink_id = ?",
+                (rs, rowNum) -> rs.getBigDecimal("price"), machineId, drinkId);
+        return prices.isEmpty() || prices.get(0) == null ? BigDecimal.ZERO : prices.get(0);
+    }
+
     public List<SalesRecord> findAll() {
         String sql = """
-                SELECT sales_id, machine_id, drink_id, quantity, sale_time, record_source
-                FROM SalesRecord
-                ORDER BY sale_time DESC, sales_id DESC
+                SELECT sr.sales_id, sr.machine_id, sr.drink_id, sr.quantity, sr.price, sr.sale_time, sr.record_source, d.drink_name
+                FROM SalesRecord sr
+                JOIN Drink d ON sr.drink_id = d.drink_id
+                ORDER BY sr.sale_time DESC, sr.sales_id DESC
                 """;
         return jdbcTemplate.query(sql, salesRecordMapper);
     }
 
     public List<SalesRecord> findByFilters(Long machineId, Long drinkId) {
         StringBuilder sql = new StringBuilder("""
-                SELECT sales_id, machine_id, drink_id, quantity, sale_time, record_source
-                FROM SalesRecord
+                SELECT sr.sales_id, sr.machine_id, sr.drink_id, sr.quantity, sr.price, sr.sale_time, sr.record_source, d.drink_name
+                FROM SalesRecord sr
+                JOIN Drink d ON sr.drink_id = d.drink_id
                 WHERE 1 = 1
                 """);
         java.util.List<Object> params = new java.util.ArrayList<>();
         if (machineId != null) {
-            sql.append(" AND machine_id = ?");
+            sql.append(" AND sr.machine_id = ?");
             params.add(machineId);
         }
         if (drinkId != null) {
-            sql.append(" AND drink_id = ?");
+            sql.append(" AND sr.drink_id = ?");
             params.add(drinkId);
         }
-        sql.append(" ORDER BY sale_time DESC, sales_id DESC");
+        sql.append(" ORDER BY sr.sale_time DESC, sr.sales_id DESC");
         return jdbcTemplate.query(sql.toString(), salesRecordMapper, params.toArray());
     }
 
     public List<RegionDrinkSalesSummaryDTO> sumDrinkSalesByRegion(Long regionId) {
         String sql = """
-                SELECT sr.drink_id, d.drink_name, COALESCE(SUM(sr.quantity), 0) AS total_quantity
+                SELECT sr.drink_id, d.drink_name,
+                       COALESCE(SUM(sr.quantity), 0) AS total_quantity,
+                       COALESCE(SUM(sr.quantity * sr.price), 0) AS total_revenue
                 FROM SalesRecord sr
                 JOIN VendingMachine vm ON sr.machine_id = vm.machine_id
                 JOIN Drink d ON sr.drink_id = d.drink_id
@@ -114,8 +133,8 @@ public class SalesRecordDao {
             dto.setDrinkId(rs.getLong("drink_id"));
             dto.setDrinkName(rs.getString("drink_name"));
             dto.setTotalQuantity(rs.getLong("total_quantity"));
+            dto.setTotalRevenue(rs.getBigDecimal("total_revenue"));
             return dto;
         }, regionId);
     }
-
 }

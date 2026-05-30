@@ -33,7 +33,10 @@ public class InventoryService {
     }
 
     public Inventory updateInventory(Long inventoryId, Inventory inventory) {
-        validateInventoryForUpdate(inventory);
+        Inventory current = inventoryDao.findById(inventoryId).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory not found")
+        );
+        validateInventoryForUpdate(inventory, current.getCapacity());
         boolean updated = inventoryDao.update(inventoryId, inventory);
         if (!updated) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory not found");
@@ -47,7 +50,8 @@ public class InventoryService {
         if (machineId == null || drinkId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "machineId and drinkId are required");
         }
-        validateInventoryForUpdate(inventory);
+        Inventory current = getInventoryByMachineIdAndDrinkId(machineId, drinkId);
+        validateInventoryForUpdate(inventory, current.getCapacity());
         boolean updated = inventoryDao.updateByMachineAndDrink(machineId, drinkId, inventory);
         if (!updated) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found for this machine and drink");
@@ -61,6 +65,8 @@ public class InventoryService {
         if (machineId == null || drinkId == null || quantity == null || quantity < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "machineId, drinkId and non-negative quantity are required");
         }
+        Inventory current = getInventoryByMachineIdAndDrinkId(machineId, drinkId);
+        validateQuantityWithinCapacity(quantity, current.getCapacity());
         boolean updated = inventoryDao.updateQuantityByMachineAndDrink(machineId, drinkId, quantity, "Auto");
         if (!updated) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found for this machine and drink");
@@ -95,11 +101,20 @@ public class InventoryService {
                 || inventory.getQuantity() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "machineId, drinkId and non-negative quantity are required");
         }
+        validateQuantityWithinCapacity(inventory.getQuantity(), inventory.getCapacity());
     }
 
-    private void validateInventoryForUpdate(Inventory inventory) {
+    private void validateInventoryForUpdate(Inventory inventory, Integer currentCapacity) {
         if (inventory == null || inventory.getQuantity() == null || inventory.getQuantity() < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "non-negative quantity is required");
+        }
+        Integer effectiveCapacity = inventory.getCapacity() != null ? inventory.getCapacity() : currentCapacity;
+        validateQuantityWithinCapacity(inventory.getQuantity(), effectiveCapacity);
+    }
+
+    private void validateQuantityWithinCapacity(Integer quantity, Integer capacity) {
+        if (capacity != null && capacity >= 0 && quantity != null && quantity > capacity) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "quantity cannot exceed capacity");
         }
     }
 
@@ -151,6 +166,24 @@ public class InventoryService {
     }
 
     public void addInventoryQuantity(Long machineId, Long drinkId, Integer addQty) {
+        Inventory current = getInventoryByMachineIdAndDrinkId(machineId, drinkId);
+        validateQuantityWithinCapacity(current.getQuantity() + addQty, current.getCapacity());
         inventoryDao.addQuantityByMachineAndDrink(machineId, drinkId, addQty);
+    }
+
+    public void setInventoryQuantityAfterManualRestock(Long machineId, Long drinkId, Integer quantity) {
+        if (machineId == null || drinkId == null || quantity == null || quantity < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "machineId, drinkId and non-negative quantity are required");
+        }
+        Inventory current = getInventoryByMachineIdAndDrinkId(machineId, drinkId);
+        validateQuantityWithinCapacity(quantity, current.getCapacity());
+        boolean updated = inventoryDao.setQuantityAfterManualRestock(machineId, drinkId, quantity);
+        if (!updated) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found for this machine and drink");
+        }
+    }
+
+    public java.math.BigDecimal getInventoryPrice(Long machineId, Long drinkId) {
+        return inventoryDao.findPriceByMachineAndDrink(machineId, drinkId);
     }
 }

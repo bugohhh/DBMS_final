@@ -6,6 +6,23 @@ let currentAssignTaskId = null;
 let currentRestockTaskId = null;
 let teamsCache = null;
 
+function todayLocalDateString() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function formatTaskDate(value) {
+    if (!value) return '—';
+    if (typeof value === 'string') return value.substring(0, 10);
+    if (Array.isArray(value) && value.length >= 3) {
+        return `${value[0]}-${String(value[1]).padStart(2, '0')}-${String(value[2]).padStart(2, '0')}`;
+    }
+    return String(value);
+}
+
 /**
  * 渲染補貨任務頁面
  * Manager → GET /refill-tasks (§10.1)
@@ -70,19 +87,19 @@ async function renderTasks(area) {
                 </tr></thead>
                 <tbody id="task-table-body">
                 ${tasks.map(t => `
-                    <tr>
+                    <tr onclick="openRefillDetails(${t.refillTaskId})" style="cursor:pointer">
                         <td style="font-family:var(--mono);color:var(--muted)">#${t.refillTaskId}</td>
                         <td>${t.regionName || '#' + t.regionId}</td>
                         <td style="font-size:12px">${t.machineNames || '—'}</td>
                         <td style="color:var(--muted)">第 ${t.teamId} 組</td>
-                        <td style="font-family:var(--mono);font-size:12px">${t.taskDate}</td>
+                        <td style="font-family:var(--mono);font-size:12px">${formatTaskDate(t.taskDate)}</td>
                         <td style="font-size:12px">${t.taskType}</td>
                         <td>${taskStatusBadge(t.status)}</td>
                         <td>
-                            ${t.status === 'Pending'
-                                ? `<button class="btn btn-sm btn-primary" onclick="openAssignTaskModal(${t.refillTaskId})">分派</button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteTask(${t.refillTaskId})">刪除</button>`
-                                : `<button class="btn btn-sm btn-danger" onclick="deleteTask(${t.refillTaskId})">刪除</button>`}
+                            ${t.status !== 'Completed'
+                                ? `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openAssignTaskModal(${t.refillTaskId})">改派</button>
+                                <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTask(${t.refillTaskId})">刪除</button>`
+                                : `<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteTask(${t.refillTaskId})">刪除</button>`}
                         </td>
                     </tr>`).join('')}
                 </tbody>
@@ -140,7 +157,7 @@ function switchStaffTab(type) {
     }
 
     container.innerHTML = tasks.map(t => `
-        <div class="card" style="margin-bottom:16px;">
+        <div class="card" style="margin-bottom:16px;cursor:pointer;" onclick="openRefillDetails(${t.refillTaskId})">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
                 <div>
                     <h3 style="font-size:16px;font-weight:700;">📦 任務 #${t.refillTaskId}</h3>
@@ -155,9 +172,9 @@ function switchStaffTab(type) {
                 <span style="color:var(--muted)">任務類型：</span>${t.taskType}
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);">
-                <span><i class="far fa-calendar-alt"></i> ${t.taskDate}</span>
+                <span><i class="far fa-calendar-alt"></i> ${formatTaskDate(t.taskDate)}</span>
                 ${type === 'pending'
-                ? `<button class="btn btn-primary" onclick="openStaffCompleteModal(${t.refillTaskId})" style="padding:6px 16px;font-size:12px;">
+                ? `<button class="btn btn-primary" onclick="event.stopPropagation();openStaffCompleteModal(${t.refillTaskId})" style="padding:6px 16px;font-size:12px;">
                     <i class="fas fa-check"></i> 回報完成
                 </button>`
                 : '<span style="color:var(--accent)">✓ 已完成</span>'}
@@ -190,9 +207,12 @@ function openAssignTaskModal(taskId) {
     document.getElementById('assign-task-id').textContent = '#' + taskId;
     (async () => {
         const teams = await loadTeams();
+        const taskRes = await apiFetch('GET', `/refill-tasks/${taskId}`);
+        const task = (await taskRes.json()).data || {};
+        const allowedTeams = teams.filter(t => String(t.regionId) === String(task.regionId));
         const selectEl = document.getElementById('assign-team-select');
         selectEl.innerHTML = '<option value="">-- 選擇班組 --</option>' +
-        teams.map(t => `<option value="${t.teamId}">${t.teamName || '#' + t.teamId}</option>`).join('');
+        allowedTeams.map(t => `<option value="${t.teamId}">${t.teamName || '#' + t.teamId}（${t.regionName || '同區域'}）</option>`).join('');
     })();
     openModal('modal-assign-task');
 }
@@ -210,11 +230,11 @@ async function submitAssignTask() {
     
     try {
         await apiFetch('PUT', `/refill-tasks/${currentAssignTaskId}/assign`, { team_id: teamId });
-        showToast('✅ 補貨任務已分派！');
+        showToast('✅ 補貨任務已改派！');
         closeModal('modal-assign-task');
         switchTab('tasks');
     } catch (e) {
-        showToast('❌ 分派失敗：' + e.message);
+        showToast('❌ 改派失敗：' + e.message);
     }
 }
 
@@ -234,10 +254,8 @@ async function openAssignModal() {
     machineSelect.innerHTML = '<option value="">-- 選擇機台 --</option>' +
         machines.map(m => `<option value="${m.machine_id}" data-region="${m.region_id}">${m.machine_name}（${m.region_name}）</option>`).join('');
 
-    // 班組選單
-    const teamSelect = document.getElementById('new-assign-team');
-    teamSelect.innerHTML = '<option value="">-- 選擇班組 --</option>' +
-        teams.map(t => `<option value="${t.teamId}">第 ${t.teamId} 組</option>`).join('');
+    window._assignTeams = teams;
+    updateAssignTeamOptions();
 
     openModal('modal-new-assign');
 }
@@ -251,23 +269,29 @@ async function submitNewAssign() {
     const machineId = parseInt(machineSelect.value);
     const selectedOption = machineSelect.options[machineSelect.selectedIndex];
     const regionId = parseInt(selectedOption?.dataset.region);
-    const teamId = parseInt(document.getElementById('new-assign-team').value);
+    const teamSelect = document.getElementById('new-assign-team');
+    const teamId = parseInt(teamSelect.value);
+    const teamRegionId = parseInt(teamSelect.options[teamSelect.selectedIndex]?.dataset.region);
     const taskType = document.getElementById('new-assign-type').value;
 
     if (!machineId || !regionId || !teamId || !taskType) {
         showToast('❌ 請填入所有必需欄位');
         return;
     }
+    if (teamRegionId !== regionId) {
+        showToast('❌ 只能分派給負責該地區的班組');
+        return;
+    }
 
     try {
-        const taskDate = new Date().toISOString().split('T')[0];
+        const taskDate = todayLocalDateString();
         await apiFetch('POST', '/refill-tasks', {
             teamId: teamId,
             regionId: regionId,
             machineId: machineId,
             taskDate: taskDate,
             taskType: taskType,
-            status: 'Pending'
+            status: 'Assigned'
         });
         showToast('✅ 補貨任務已新增！');
         closeModal('modal-new-assign');
@@ -314,8 +338,11 @@ async function openStaffCompleteModal(taskId) {
                     <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);padding:10px 14px;border-radius:10px;">
                         <span style="font-size:13px;font-weight:600;">${i.drink_name}</span>
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="font-size:12px;color:var(--muted)">實際補貨數量</span>
-                            <input type="number" min="0" value="0" id="complete-qty-${i.drink_name}"
+                            <span style="font-size:12px;color:var(--muted)">補貨前</span>
+                            <input type="number" min="0" value="${i.quantity ?? 0}" id="before-qty-${i.drink_id}"
+                                style="width:64px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;text-align:center" />
+                            <span style="font-size:12px;color:var(--muted)">補貨量</span>
+                            <input type="number" min="0" value="0" id="complete-qty-${i.drink_id}"
                                 style="width:64px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;text-align:center" />
                         </div>
                     </div>
@@ -341,13 +368,11 @@ async function submitStaffComplete() {
     const items = [];
     const inputs = document.querySelectorAll('[id^="complete-qty-"]');
     inputs.forEach(input => {
-        const drinkName = input.id.replace('complete-qty-', '');
+        const drinkId = parseInt(input.id.replace('complete-qty-', ''));
         const qty = parseInt(input.value) || 0;
-        // 從 window._staffMachines 找 drink_id
-        const machine = (window._staffMachines || []).find(m => m.machine_name === task?.machineNames);
-        const inv = (machine?.inventory || []).find(i => i.drink_name === drinkName);
-        if (inv) {
-            items.push({ drink_id: inv.drink_id, actual_quantity: qty });
+        const beforeQty = parseInt(document.getElementById(`before-qty-${drinkId}`)?.value);
+        if (drinkId) {
+            items.push({ drink_id: drinkId, before_quantity: isNaN(beforeQty) ? null : beforeQty, actual_quantity: qty });
         }
     });
 
@@ -372,6 +397,29 @@ function filterMachineOptions() {
     options.forEach(opt => {
         opt.style.display = opt.textContent.toLowerCase().includes(keyword) ? '' : 'none';
     });
+    updateAssignTeamOptions();
+}
+
+function updateAssignTeamOptions() {
+    const machineSelect = document.getElementById('new-assign-machine');
+    const teamSelect = document.getElementById('new-assign-team');
+    if (!machineSelect || !teamSelect) return;
+
+    const selectedOption = machineSelect.options[machineSelect.selectedIndex];
+    const regionId = selectedOption?.dataset.region;
+    const teams = window._assignTeams || [];
+
+    if (!regionId) {
+        teamSelect.innerHTML = '<option value="">-- 請先選擇機台 --</option>';
+        return;
+    }
+
+    const allowedTeams = teams.filter(t => String(t.regionId) === String(regionId));
+    teamSelect.innerHTML = allowedTeams.length
+        ? '<option value="">-- 選擇該地區班組 --</option>' + allowedTeams.map(t =>
+            `<option value="${t.teamId}" data-region="${t.regionId || ''}">${t.teamName || '第 ' + t.teamId + ' 組'}${t.regionName ? '（' + t.regionName + '）' : ''}</option>`
+        ).join('')
+        : '<option value="">-- 此地區沒有可分派班組 --</option>';
 }
 
 
@@ -384,3 +432,21 @@ function filterTasks() {
     });
 }
 
+
+
+async function openRefillDetails(taskId) {
+    const container = document.getElementById('refill-details-container');
+    container.innerHTML = '<div style="color:var(--muted);font-size:13px">載入中...</div>';
+    openModal('modal-refill-details');
+    try {
+        const res = await apiFetch('GET', `/refill-tasks/${taskId}/details`);
+        const data = await res.json();
+        const rows = data.data || [];
+        container.innerHTML = rows.length === 0
+            ? '<div style="color:var(--muted);font-size:13px">尚無 refilldetail。補貨任務完成回報後才會產生明細；若這是舊任務，請確認該任務是否真的有 RefillDetail 資料。</div>'
+            : `<table><thead><tr><th>飲料</th><th>補貨前/計畫</th><th>補貨量</th><th>時間</th></tr></thead><tbody>${rows.map(r => `
+                <tr><td>${r.drink_name || r.drinkName}</td><td>${r.planned_quantity ?? '—'}</td><td>${r.actual_quantity ?? '—'}</td><td style="font-size:12px;color:var(--muted)">${r.refill_time || ''}</td></tr>`).join('')}</tbody></table>`;
+    } catch(e) {
+        container.innerHTML = `<div style="color:var(--danger);font-size:13px">載入失敗：${e.message}</div>`;
+    }
+}

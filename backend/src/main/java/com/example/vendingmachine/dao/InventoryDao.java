@@ -87,7 +87,7 @@ public class InventoryDao {
     public boolean update(Long inventoryId, Inventory inventory) {
         String sql = """
                 UPDATE Inventory
-                SET quantity = ?, price = ?, threshold = ?, capacity = ?, last_restock = NOW(), update_source = 'Manual'
+                SET quantity = ?, price = COALESCE(?, price), threshold = COALESCE(?, threshold), capacity = COALESCE(?, capacity), last_restock = NOW(), update_source = 'Manual'
                 WHERE inventory_id = ?
                 """;
         int updated = jdbcTemplate.update(sql,
@@ -103,7 +103,7 @@ public class InventoryDao {
     public boolean updateByMachineAndDrink(Long machineId, Long drinkId, Inventory inventory) {
         String sql = """
                 UPDATE Inventory
-                SET quantity = ?, price = ?, threshold = ?, capacity = ?, last_restock = NOW(), update_source = 'Manual'
+                SET quantity = ?, price = COALESCE(?, price), threshold = COALESCE(?, threshold), capacity = COALESCE(?, capacity), last_restock = NOW(), update_source = 'Manual'
                 WHERE machine_id = ? AND drink_id = ?
                 """;
         int updated = jdbcTemplate.update(sql,
@@ -133,8 +133,24 @@ public class InventoryDao {
     }
 
     public void addQuantityByMachineAndDrink(Long machineId, Long drinkId, Integer addQty) {
-        String sql = "UPDATE Inventory SET quantity = quantity + ? WHERE machine_id = ? AND drink_id = ?";
+        String sql = "UPDATE Inventory SET quantity = quantity + ?, last_restock = NOW(), update_source = 'Manual' WHERE machine_id = ? AND drink_id = ?";
         jdbcTemplate.update(sql, addQty, machineId, drinkId);
+    }
+
+    public boolean setQuantityAfterManualRestock(Long machineId, Long drinkId, Integer quantity) {
+        String sql = """
+                UPDATE Inventory
+                SET quantity = ?, last_restock = NOW(), update_source = 'Manual'
+                WHERE machine_id = ? AND drink_id = ?
+                """;
+        return jdbcTemplate.update(sql, quantity, machineId, drinkId) > 0;
+    }
+
+    public java.math.BigDecimal findPriceByMachineAndDrink(Long machineId, Long drinkId) {
+        List<java.math.BigDecimal> prices = jdbcTemplate.query(
+                "SELECT price FROM Inventory WHERE machine_id = ? AND drink_id = ?",
+                (rs, rowNum) -> rs.getBigDecimal("price"), machineId, drinkId);
+        return prices.isEmpty() || prices.get(0) == null ? java.math.BigDecimal.ZERO : prices.get(0);
     }
 
     public boolean decreaseQuantityByMachineAndDrink(Long machineId, Long drinkId, Integer quantitySold) {

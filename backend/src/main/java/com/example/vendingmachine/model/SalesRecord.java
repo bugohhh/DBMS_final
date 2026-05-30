@@ -1,6 +1,8 @@
 package com.example.vendingmachine.model;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class SalesRecord {
 
@@ -8,6 +10,8 @@ public class SalesRecord {
     private Long machineId;
     private Long drinkId;
     private Integer quantity;
+    private BigDecimal price;
+    private String drinkName;
     private LocalDateTime saleTime;
     private String recordSource;
 
@@ -19,6 +23,13 @@ public class SalesRecord {
     public void setDrinkId(Long drinkId) { this.drinkId = drinkId; }
     public Integer getQuantity() { return quantity; }
     public void setQuantity(Integer quantity) { this.quantity = quantity; }
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
+    @JsonProperty("drinkName")
+    public String getDrinkName() { return drinkName; }
+    @JsonProperty("drink_name")
+    public String getDrink_name() { return drinkName; }
+    public void setDrinkName(String drinkName) { this.drinkName = drinkName; }
     public LocalDateTime getSaleTime() { return saleTime; }
     public void setSaleTime(LocalDateTime saleTime) { this.saleTime = saleTime; }
     public String getRecordSource() { return recordSource; }

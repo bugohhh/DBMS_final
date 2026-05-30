@@ -27,6 +27,8 @@ public class VendingMachineDao {
             machine.setMachineId(rs.getLong("machine_id"));
             machine.setMachineName(rs.getString("machine_name"));
             machine.setRegionId(rs.getLong("region_id"));
+            machine.setMachineType(rs.getString("machine_type"));
+            machine.setLocation(rs.getString("location"));
             machine.setStatus(rs.getString("status"));
             return machine;
         }
@@ -51,14 +53,15 @@ public class VendingMachineDao {
 
     public VendingMachine save(VendingMachine machine) {
         if (machine.getMachineId() == null) {
-            String sql = "INSERT INTO VendingMachine (machine_name, machine_type, location, region_id) VALUES (?, ?, ?, ?)";
+            String sql = "INSERT INTO VendingMachine (machine_name, machine_type, location, status, region_id) VALUES (?, ?, ?, COALESCE(?, '運行'), ?)";
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
                 ps.setString(1, machine.getMachineName());
-                ps.setString(2, "Smart");
+                ps.setString(2, machine.getMachineType() == null ? "Smart" : machine.getMachineType());
                 ps.setString(3, machine.getLocation());
-                ps.setLong(4, machine.getRegionId());
+                ps.setString(4, machine.getStatus());
+                ps.setLong(5, machine.getRegionId());
                 return ps;
             }, keyHolder);
             
@@ -66,8 +69,8 @@ public class VendingMachineDao {
             if (key != null) machine.setMachineId(key.longValue());
             return machine;
         } else {
-            String sql = "UPDATE VendingMachine SET machine_name = ?, region_id = ? WHERE machine_id = ?";
-            jdbcTemplate.update(sql, machine.getMachineName(), machine.getRegionId(), machine.getMachineId());
+            String sql = "UPDATE VendingMachine SET machine_name = ?, machine_type = COALESCE(?, machine_type), location = COALESCE(?, location), region_id = ? WHERE machine_id = ?";
+            jdbcTemplate.update(sql, machine.getMachineName(), machine.getMachineType(), machine.getLocation(), machine.getRegionId(), machine.getMachineId());
             return machine;
         }
     }

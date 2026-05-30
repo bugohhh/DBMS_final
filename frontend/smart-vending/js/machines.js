@@ -65,12 +65,11 @@ async function renderMachines(area) {
                         <th>機台 ID</th><th>名稱</th><th>地區</th><th>庫存明細</th><th>狀態</th><th>現場狀態</th>
                         ${isManager ? '<th>操作</th>' : ''}
                     </tr></thead>
-                    <tbody>
                     <tbody id="machine-table-body">
                     ${machines.map(m => `
                         <tr>
                             <td style="font-family:var(--mono);color:var(--muted)">#${m.machine_id}</td>
-                            <td style="font-weight:700">${m.machine_name}</td>
+                            <td style="font-weight:700">${m.machine_name}<br><span style="font-size:11px;color:var(--muted)">${m.machine_type || m.machineType || 'Smart'}</span></td>
                             <td style="color:var(--muted)">${m.region_name}</td>
                            <td style="font-size:12px;color:var(--muted);cursor:pointer" onclick="openEditInventory(${m.machine_id}, '${m.machine_name}')">
                                 ${(m.inventory||[]).filter(i => i.quantity > 0).slice(0, 2).map(i => `${i.drink_name}: ${i.quantity}`).join(' ／ ')}${(m.inventory||[]).filter(i => i.quantity > 0).length > 2 ? ' ...' : ''}
@@ -142,6 +141,11 @@ async function openAddMachineModal() {
                     <input type="number" min="0" value="${window._newDrinkDefaultPrice || 30}"
                         id="inv-price-${d.drinkId}"
                         style="width:64px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;text-align:center" />
+                    <span style="font-size:12px;color:var(--muted)">容量</span>
+                    <input type="number" min="1" value="30"
+                        id="inv-capacity-${d.drinkId}"
+                        oninput="syncNewMachineQtyMax(${d.drinkId})"
+                        style="width:60px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;text-align:center" />
                 </div>
             </div>
         `).join('');
@@ -149,6 +153,19 @@ async function openAddMachineModal() {
         container.dataset.drinks = JSON.stringify(drinks.map(d => d.drinkId));
     } catch(e) {
         container.innerHTML = '<div style="color:var(--danger);font-size:13px">載入飲料清單失敗</div>';
+    }
+}
+
+
+function syncNewMachineQtyMax(drinkId) {
+    const cap = parseInt(document.getElementById(`inv-capacity-${drinkId}`)?.value || 30);
+    const qtyInput = document.getElementById(`inv-qty-${drinkId}`);
+    if (!qtyInput) return;
+    if (cap > 0) qtyInput.max = String(cap);
+    const qty = parseInt(qtyInput.value || 0);
+    if (cap > 0 && qty > cap) {
+        qtyInput.value = cap;
+        showToast(`❌ 數量不能超過容量 ${cap}`);
     }
 }
 
@@ -161,6 +178,7 @@ async function submitAddMachine() {
     const machine_name = document.getElementById('new-vm-name').value.trim();
     const region_name = document.getElementById('new-vm-area').value.trim();
     const location = document.getElementById('new-vm-location').value.trim();
+    const machine_type = document.getElementById('new-vm-type').value;
 
     if (!machine_name || !region_name) {
         showToast('❌ 請填寫機台名稱和地區');
@@ -174,7 +192,18 @@ async function submitAddMachine() {
         drinkId,
         quantity: parseInt(document.getElementById(`inv-qty-${drinkId}`)?.value || 0),
         price: parseFloat(document.getElementById(`inv-price-${drinkId}`)?.value || 0),
+        capacity: parseInt(document.getElementById(`inv-capacity-${drinkId}`)?.value || 30),
     }));
+    const invalidCapacity = inventoryItems.find(item => !item.capacity || item.capacity < 1);
+    if (invalidCapacity) {
+        showToast('❌ 容量必須大於 0');
+        return;
+    }
+    const overCapacity = inventoryItems.find(item => item.quantity > item.capacity);
+    if (overCapacity) {
+        showToast(`❌ 新機台飲料數量不能超過容量 ${overCapacity.capacity}`);
+        return;
+    }
 
     if (USE_MOCK) {
         const newId = MOCK.machines.length > 0 ? Math.max(...MOCK.machines.map(m => m.machine_id)) + 1 : 1;
@@ -182,7 +211,7 @@ async function submitAddMachine() {
     } else {
         try {
             // 1. 新增機台
-            const res = await apiFetch('POST', '/machines', { machine_name, region_name, location });
+            const res = await apiFetch('POST', '/machines', { machine_name, region_name, location, machine_type });
             const data = await res.json();
             console.log('新增機台回傳:', JSON.stringify(data));
             const newMachineId = data.data?.machineId || data.data?.machine_id;
@@ -197,7 +226,7 @@ async function submitAddMachine() {
                         quantity: item.quantity,
                         price: item.price,
                         lowStockThreshold: 5,
-                        capacity: 30,
+                        capacity: item.capacity,
                     });
                 }
             }
@@ -212,6 +241,7 @@ async function submitAddMachine() {
     document.getElementById('new-vm-name').value = '';
     document.getElementById('new-vm-location').value = '';
     document.getElementById('new-vm-area').value = '';
+    document.getElementById('new-vm-type').value = 'Smart';
     switchTab('machines');
     window._newDrinkDefaultPrice = null;
 }
@@ -374,9 +404,13 @@ async function openEditInventory(machineId, machineName) {
                     <span style="font-size:13px;font-weight:600;flex:1;">${i.drinkName}</span>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-size:12px;color:var(--muted)">數量</span>
-                        <input type="number" min="0" value="${i.quantity}"
+                        <input type="number" min="0" max="${i.capacity || 30}" value="${i.quantity}"
                             id="edit-qty-${i.inventoryId}"
                             style="width:64px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;text-align:center" />
+                        <span style="font-size:12px;color:var(--muted)">價格</span>
+                        <input type="number" min="0" value="${i.price || 0}"
+                            id="edit-price-${i.inventoryId}"
+                            style="width:72px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;text-align:center" />
                         <button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger);padding:4px 8px;"
                             onclick="removeInventoryItem(${i.inventoryId})">✕</button>
                     </div>
@@ -395,7 +429,18 @@ async function submitEditInventory() {
         for (const item of items) {
             const id = item.inventoryId || item.inventory_id;
             const qty = parseInt(document.getElementById(`edit-qty-${id}`)?.value) || 0;
-            await apiFetch('PUT', `/inventory/${id}`, { quantity: qty });
+            const capacity = item.capacity || 30;
+            if (qty > capacity) {
+                showToast(`❌ ${item.drinkName || item.drink_name || '庫存'} 數量不能超過容量 ${capacity}`);
+                return;
+            }
+            const price = parseFloat(document.getElementById(`edit-price-${id}`)?.value || item.price || 0);
+            await apiFetch('PUT', `/inventory/${id}`, {
+                quantity: qty,
+                price: price,
+                lowStockThreshold: item.lowStockThreshold || item.threshold || 5,
+                capacity: capacity
+            });
         }
         showToast('✅ 庫存已更新！');
         closeModal('modal-edit-inventory');
@@ -463,6 +508,8 @@ async function openAddDrinkToMachine(machineId) {
 async function addDrinkToMachine(machineId, drinkId) {
     const qty = parseInt(document.getElementById(`add-inv-qty-${drinkId}`)?.value) || 0;
     const price = parseFloat(document.getElementById(`add-inv-price-${drinkId}`)?.value) || 30;
+    const capacity = 30;
+    if (qty > capacity) { showToast(`❌ 數量不能超過容量 ${capacity}`); return; }
     try {
         const res = await apiFetch('POST', '/inventory', {
             machineId: machineId,

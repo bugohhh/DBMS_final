@@ -204,7 +204,8 @@ async function loadConsumerMachine(machineId, machineName) {
     // 更新標題
     document.getElementById('consumer-machine-name').textContent = machineName;
     const machine = _allConsumerMachines.find(m => m.machine_id === machineId);
-    document.getElementById('consumer-machine-id').textContent = `機台編號: VM-00${machineId}${machine?.region_name ? ' · ' + machine.region_name : ''}`;
+    const machineType = machine?.machine_type || machine?.machineType || 'Smart';
+    document.getElementById('consumer-machine-id').textContent = `機台編號: VM-00${machineId}${machine?.region_name ? ' · ' + machine.region_name : ''} · ${machineType === 'Traditional' ? '傳統型' : '智慧型'}`;
     document.getElementById('consumer-inventory').innerHTML =
         '<div style="text-align:center;color:var(--muted);padding:20px">載入中...</div>';
 
@@ -222,8 +223,11 @@ async function loadConsumerMachine(machineId, machineName) {
 
         document.getElementById('consumer-inventory').innerHTML = items.map(item => {
             const qty = item.quantity;
+            const isTraditional = machineType === 'Traditional';
             let badge, opacity = '1';
-            if (qty === 0) {
+            if (isTraditional) {
+                badge = `<span class="badge badge-warn">數量未知</span>`;
+            } else if (qty === 0) {
                 badge = `<span class="badge badge-err">✕ 售罄</span>`;
                 opacity = '0.5';
             } else if (qty <= 5) {
@@ -262,6 +266,8 @@ function enterSystem() {
     document.getElementById('nav-teams').style.display =
         user.user_type === 'Manager' ? 'flex' : 'none';
     document.getElementById('nav-users').style.display =
+        user.user_type === 'Manager' ? 'flex' : 'none';
+    document.getElementById('nav-drinks').style.display =
         user.user_type === 'Manager' ? 'flex' : 'none';
 
     switchTab('dashboard');
