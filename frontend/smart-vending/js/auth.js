@@ -261,6 +261,8 @@ function enterSystem() {
         user.user_type === 'Manager' ? 'flex' : 'none';
     document.getElementById('nav-teams').style.display =
         user.user_type === 'Manager' ? 'flex' : 'none';
+    document.getElementById('nav-users').style.display =
+        user.user_type === 'Manager' ? 'flex' : 'none';
 
     switchTab('dashboard');
 }

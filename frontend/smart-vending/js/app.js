@@ -17,6 +17,7 @@ function switchTab(tab) {
     else if (tab === 'tasks') renderTasks(area);
     else if (tab === 'sales') renderSales(area);
     else if (tab === 'teams') renderTeams(area);
+    else if (tab === 'users') renderUsers(area);
 }
 
 /**
@@ -91,6 +92,73 @@ async function renderDashboard(area) {
                 </tbody>
             </table>
         </div>`;
+}
+
+/**
+ * 渲染帳號管理頁面
+ * Manager 可在這裡替 staff 重設密碼。
+ */
+async function renderUsers(area) {
+    const user = getCurrentUser();
+    if (!user || user.user_type !== 'Manager') {
+        area.innerHTML = '<div class="card" style="padding:24px;color:var(--danger)">權限不足，只有管理員可以管理帳號。</div>';
+        return;
+    }
+
+    area.innerHTML = loadingHTML('載入使用者名冊中...');
+
+    try {
+        const res = await apiFetch('GET', '/auth/users');
+        const data = await res.json();
+        if (!data.success) {
+            area.innerHTML = `<div class="card" style="padding:24px;color:var(--danger)">${data.message || '載入使用者失敗'}</div>`;
+            return;
+        }
+
+        const users = data.data || [];
+        area.innerHTML = `
+            <div class="page-header">
+                <h2>帳號管理</h2>
+                <p>管理員可替補貨人員重設密碼；staff 不直接修改自己的密碼。</p>
+            </div>
+            <div class="card">
+                <table>
+                    <thead><tr><th>User ID</th><th>姓名</th><th>角色</th><th>操作</th></tr></thead>
+                    <tbody>
+                        ${users.map(u => `
+                            <tr>
+                                <td style="font-family:var(--mono)">#${u.user_id}</td>
+                                <td style="font-weight:700">${u.user_name}</td>
+                                <td>${u.user_type === 'Manager' ? '<span class="badge badge-ok">Manager</span>' : '<span class="badge badge-warn">Staff</span>'}</td>
+                                <td>
+                                    ${u.user_type === 'Staff'
+                                        ? `<button class="btn btn-primary btn-sm" onclick="resetStaffPassword(${u.user_id}, '${String(u.user_name).replace(/'/g, "\\'")}')">重設密碼</button>`
+                                        : '<span style="color:var(--muted);font-size:12px">—</span>'}
+                                </td>
+                            </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+    } catch (e) {
+        area.innerHTML = '<div class="card" style="padding:24px;color:var(--danger)">無法連線至伺服器，請確認後端是否啟動。</div>';
+    }
+}
+
+async function resetStaffPassword(userId, userName) {
+    const newPassword = prompt(`請輸入 ${userName} 的新密碼`);
+    if (!newPassword) return;
+
+    try {
+        const res = await apiFetch('PUT', `/auth/users/${userId}/password`, { new_password: newPassword });
+        const data = await res.json();
+        if (data.success) {
+            showToast('✅ 密碼已重設');
+        } else {
+            showToast('❌ ' + (data.message || '重設失敗'));
+        }
+    } catch (e) {
+        showToast('❌ 無法連線至伺服器');
+    }
 }
 
 /**

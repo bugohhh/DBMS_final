@@ -13,7 +13,10 @@ let currentUser = null; // { user_id, user_name, user_type }
  */
 async function apiFetch(method, path, body = null) {
     const headers = { 'Content-Type': 'application/json' };
-    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+    // 後端目前用 LoginSession.refresh_token_hash 驗證 /me、manager 權限與改密碼 API，
+    // 因此 Authorization 必須帶 refreshToken；若只帶 accessToken，manager-only API 會一直被判定權限不足。
+    const authToken = refreshToken || accessToken;
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
     const res = await fetch(BASE_URL + path, {
         method,
@@ -26,7 +29,7 @@ async function apiFetch(method, path, body = null) {
         const refreshed = await tryRefreshToken();
         if (refreshed) {
             // 用新 token 重打一次
-            headers['Authorization'] = `Bearer ${accessToken}`;
+            headers['Authorization'] = `Bearer ${refreshToken || accessToken}`;
             return fetch(BASE_URL + path, { method, headers, body: body ? JSON.stringify(body) : null });
         } else {
             // refresh 也失敗 → 登出

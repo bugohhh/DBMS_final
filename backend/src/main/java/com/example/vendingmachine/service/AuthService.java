@@ -78,7 +78,7 @@ public class AuthService {
      * 1. token 找得到一筆 LoginSession
      * 2. 該 session 沒有被撤銷 revoked_at IS NULL
      * 3. 該 session 沒過期 expires_at > NOW()
-     * 4. 該 user_id 同時存在於 Manager 表，代表是管理員
+     * 4. 該 user_id 在 User 表的 user_type = 'Manager'
      *
      * 注意：正式系統不建議直接存明文 token，應該存 hash 後再比對。
      */
@@ -102,11 +102,13 @@ public class AuthService {
 
     public boolean isManagerToken(String token) {
         // COUNT(*) > 0 就代表這個 token 對應到有效的管理員 session。
+        // 注意：目前資料庫以 User.user_type 記錄權限，不依賴 Manager 表。
         String sql = """
                 SELECT COUNT(*)
-                FROM LoginSession ls
-                JOIN Manager m ON ls.user_id = m.user_id
+                FROM `LoginSession` ls
+                JOIN `User` u ON ls.user_id = u.user_id
                 WHERE ls.refresh_token_hash = ?
+                  AND u.user_type = 'Manager'
                   AND ls.revoked_at IS NULL
                   AND (ls.expires_at IS NULL OR ls.expires_at > NOW())
                 """;
@@ -116,7 +118,7 @@ public class AuthService {
             Integer count = jdbcTemplate.queryForObject(sql, Integer.class, token);
             return count != null && count > 0;
         } catch (DataAccessException e) {
-            // 查詢失敗時，安全起見視為驗證失敗，不給讀 sales records。
+            // 查詢失敗時，安全起見視為驗證失敗，不給 manager-only API。
             return false;
         }
     }
