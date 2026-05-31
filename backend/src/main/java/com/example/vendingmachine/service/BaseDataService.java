@@ -32,7 +32,8 @@ public class BaseDataService {
         return regionDao.findAll(); 
     }
     
-    public Region createRegion(Region region) { 
+    public Region createRegion(Region region) {
+        validateRegionManager(region);
         return regionDao.save(region); 
     }
     
@@ -46,6 +47,8 @@ public class BaseDataService {
         Region region = regionDao.findById(id).orElseThrow(() -> new RuntimeException("找不到該區域"));
         region.setName(updatedRegion.getName());
         region.setDescription(updatedRegion.getDescription());
+        region.setManagerId(updatedRegion.getManagerId());
+        validateRegionManager(region);
         return regionDao.save(region);
     }
     
@@ -57,6 +60,15 @@ public class BaseDataService {
         }
         
         regionDao.deleteById(id); 
+    }
+
+    private void validateRegionManager(Region region) {
+        if (region.getManagerId() == null) {
+            throw new RuntimeException("請填寫負責 Manager User ID");
+        }
+        if (!regionDao.isManagerUser(region.getManagerId())) {
+            throw new RuntimeException("負責人 User ID 必須存在，且 user_type 必須是 Manager");
+        }
     }
 
     // === Team 功能 ===

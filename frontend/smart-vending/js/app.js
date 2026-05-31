@@ -20,6 +20,7 @@ function switchTab(tab) {
     else if (tab === 'tasks') renderTasks(area);
     else if (tab === 'sales') renderSales(area);
     else if (tab === 'teams') renderTeams(area);
+    else if (tab === 'regions') renderRegions(area);
     else if (tab === 'users') renderUsers(area);
     else if (tab === 'drinks') renderDrinks(area);
 }

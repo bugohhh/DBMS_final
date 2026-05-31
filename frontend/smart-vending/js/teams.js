@@ -6,16 +6,10 @@ async function renderTeams(area) {
     area.innerHTML = loadingHTML('載入團隊資料...');
 
     let teams = [];
-    let regions = [];
     try {
-        const [teamsRes, regionsRes] = await Promise.all([
-            apiFetch('GET', '/teams'),
-            apiFetch('GET', '/regions')
-        ]);
+        const teamsRes = await apiFetch('GET', '/teams');
         const teamsData = await teamsRes.json();
-        const regionsData = await regionsRes.json();
         teams = Array.isArray(teamsData) ? teamsData : (teamsData.data || []);
-        regions = Array.isArray(regionsData) ? regionsData : (regionsData.data || []);
     } catch (e) {
         area.innerHTML = `<div style="padding:60px;text-align:center;color:var(--danger)">❌ 載入失敗: ${e.message}</div>`;
         return;
@@ -35,29 +29,9 @@ async function renderTeams(area) {
     area.innerHTML = `
         <div class="page-header">
             <h2>團隊管理</h2>
-            <p>管理班組、成員及地區</p>
+            <p>管理班組與成員；地區請到「地區管理」頁面維護。</p>
         </div>
 
-        <!-- 地區管理 -->
-        <div class="card" style="margin-bottom:20px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <div style="font-weight:700;">📍 地區管理</div>
-                <button class="btn btn-ghost btn-sm" onclick="openModal('modal-add-region')">+ 新增地區</button>
-            </div>
-            ${regions.length === 0
-                ? '<div style="color:var(--muted);font-size:13px;">尚無地區資料</div>'
-                : `<div style="display:flex;flex-wrap:wrap;gap:8px;">
-                    ${regions.map(r => `
-                        <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);padding:8px 14px;border-radius:10px;border:1px solid var(--border);">
-                            <span style="font-size:13px;font-weight:600;">${r.name}</span>
-                            <button class="btn btn-ghost" style="padding:2px 6px;color:var(--danger);border-color:var(--danger);font-size:11px;"
-                                onclick="deleteRegion(${r.id})">✕</button>
-                        </div>
-                    `).join('')}
-                </div>`}
-        </div>
-
-        <!-- 班組管理 -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;">
             <div style="font-weight:700;font-size:18px;">👥 班組管理</div>
             <input type="text" id="team-search" placeholder="🔍 搜尋班組或地區..." oninput="filterTeams()"
@@ -96,35 +70,6 @@ async function renderTeams(area) {
                 </div>
             `).join('')}
     `;
-}
-
-// 新增地區
-async function submitAddRegion() {
-    const name = document.getElementById('new-region-name').value.trim();
-    if (!name) { showToast('❌ 請填寫地區名稱'); return; }
-    try {
-        const res = await apiFetch('POST', '/regions', { regionName: name });
-        if (!res.ok) throw new Error('API 返回錯誤: ' + res.status);
-        showToast('✅ 地區已新增！');
-        closeModal('modal-add-region');
-        document.getElementById('new-region-name').value = '';
-        switchTab('teams');
-    } catch (e) {
-        showToast('❌ 新增失敗：' + e.message);
-    }
-}
-
-// 刪除地區
-async function deleteRegion(regionId) {
-    if (!confirm('確定要刪除此地區？')) return;
-    try {
-        const res = await apiFetch('DELETE', `/regions/${regionId}`);
-        if (!res.ok) throw new Error('API 返回錯誤: ' + res.status);
-        showToast('✅ 地區已刪除');
-        switchTab('teams');
-    } catch (e) {
-        showToast('❌ 刪除失敗：' + e.message);
-    }
 }
 
 // 新增班組
@@ -174,10 +119,7 @@ async function submitAddStaff() {
     const teamId = window._addStaffTeamId;
     if (!staffId) { showToast('❌ 請填寫 Staff User ID'); return; }
 
-    // 先檢查該 user 是否存在且是 Staff
     try {
-        const checkRes = await apiFetch('GET', '/regions');  // 先用任意 API 確認連線
-        
         const res = await apiFetch('POST', `/teams/${teamId}/staff`, { staffId: staffId });
         if (!res.ok) {
             const errData = await res.json().catch(() => null);

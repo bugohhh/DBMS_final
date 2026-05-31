@@ -75,14 +75,6 @@ CREATE TABLE `LoginSession` (
 ) ENGINE=InnoDB AUTO_INCREMENT=226 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 DROP TABLE IF EXISTS `Manager`;
-CREATE TABLE `Manager` (
-  `manager_id` int NOT NULL AUTO_INCREMENT,
-  `user_id` int NOT NULL,
-  PRIMARY KEY (`manager_id`),
-  UNIQUE KEY `user_id` (`user_id`),
-  UNIQUE KEY `user_id_2` (`user_id`),
-  CONSTRAINT `manager_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `User` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 DROP TABLE IF EXISTS `RefillDetail`;
 CREATE TABLE `RefillDetail` (
@@ -124,11 +116,17 @@ CREATE TABLE `Region` (
   `region_id` int NOT NULL AUTO_INCREMENT,
   `region_name` varchar(100) NOT NULL,
   `description` text,
-  `manager_id` int DEFAULT NULL,
-  PRIMARY KEY (`region_id`),
-  KEY `manager_id` (`manager_id`),
-  CONSTRAINT `region_ibfk_1` FOREIGN KEY (`manager_id`) REFERENCES `Manager` (`user_id`)
+  PRIMARY KEY (`region_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `Manager` (
+  `region_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  PRIMARY KEY (`region_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `manager_ibfk_1` FOREIGN KEY (`region_id`) REFERENCES `Region` (`region_id`),
+  CONSTRAINT `manager_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `User` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 DROP TABLE IF EXISTS `SalesRecord`;
 CREATE TABLE `SalesRecord` (
@@ -501,11 +499,11 @@ INSERT INTO `RefillTask` (`refilltask_id`, `team_id`, `region_id`, `task_date`, 
 (11, 2, 1, '2026-05-27', 'Regular Refill', '2026-05-27 18:29:50', 'Completed', 17),
 (12, 2, 1, '2026-05-28', 'Regular Refill', '2026-05-28 15:28:02', 'Pending', 18);
 
-INSERT INTO `Region` (`region_id`, `region_name`, `description`, `manager_id`) VALUES
-(1, '大安區', NULL, NULL),
-(2, '文山區', '指定主要區域', NULL),
-(3, '信義區', '台北東區', NULL),
-(4, '大同區', '台北北區', NULL);
+INSERT INTO `Region` (`region_id`, `region_name`, `description`) VALUES
+(1, '大安區', NULL),
+(2, '文山區', '指定主要區域'),
+(3, '信義區', '台北東區'),
+(4, '大同區', '台北北區');
 
 INSERT INTO `SalesRecord` (`sales_id`, `machine_id`, `drink_id`, `quantity`, `sale_time`, `record_source`) VALUES
 (1, 3, 1, 1, '2026-05-29 22:30:00', 'Auto');
@@ -525,6 +523,10 @@ INSERT INTO `User` (`user_id`, `user_name`, `user_type`) VALUES
 (2, '王小明', 'Manager'),
 (3, '陳大文', 'Staff'),
 (4, 'ek', 'Staff');
+
+INSERT INTO `Manager` (`region_id`, `user_id`) VALUES
+(1, 2),
+(2, 2);
 
 INSERT INTO `VendingMachine` (`machine_id`, `machine_name`, `machine_type`, `location`, `install_date`, `status`, `region_id`) VALUES
 (3, 'VM-001', 'Smart', 'NCCU 商學院 1F', NULL, NULL, 2),
