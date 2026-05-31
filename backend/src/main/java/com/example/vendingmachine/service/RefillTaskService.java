@@ -121,16 +121,15 @@ public class RefillTaskService {
     @Transactional
     public RefillTask completeWithItems(Long refillTaskId, Long machineId, List<Map<String, Object>> items) {
         RefillTask task = getRefillTasksByRefillTaskId(refillTaskId);
+        boolean taskLocked = refillTaskDao.markCompleting(refillTaskId);
+        if (!taskLocked) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "此任務已完成或正在處理中");
+        }
+
         Long targetMachineId = machineId != null ? machineId : task.getMachineId();
         if (targetMachineId != null && items != null) {
             for (Map<String, Object> item : items) {
                 Long drinkId = ((Number) item.get("drink_id")).longValue();
-                // 防止重複完成 — 放在 for 迴圈外面
-                boolean taskLocked = refillTaskDao.markCompleting(refillTaskId);
-                if (!taskLocked) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "此任務已完成或正在處理中");
-                }
-                // for 迴圈裡面
                 Inventory lockedInv = inventoryService.lockInventory(targetMachineId, drinkId);
                 if (lockedInv == null) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "找不到庫存: machine=" + targetMachineId + " drink=" + drinkId);
@@ -164,6 +163,20 @@ public class RefillTaskService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refill task ID is required");
         }
         return refillTaskDao.findDetailsByTaskId(refillTaskId);
+    }
+
+    public boolean isTaskAssignedToStaff(Long refillTaskId, Long staffId) {
+        if (refillTaskId == null || staffId == null) return false;
+        return refillTaskDao.isTaskAssignedToStaff(refillTaskId, staffId);
+    }
+
+    public Long getTaskIdByDetailId(Long refillDetailsId) {
+        if (refillDetailsId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refill details ID is required");
+        }
+        return refillTaskDao.findTaskIdByDetailId(refillDetailsId).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Refill detail not found")
+        );
     }
 
     private void validateTeamBelongsToRegion(Long teamId, Long regionId) {

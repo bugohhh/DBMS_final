@@ -260,17 +260,18 @@ function enterSystem() {
     document.getElementById('role-badge').textContent = user.user_name + ' · ' + user.user_type;
     
 
-    // Staff 看不到銷售分析（前端畫面控制，後端仍會擋權限）
-    document.getElementById('nav-sales').style.display =
-        user.user_type === 'Manager' ? 'flex' : 'none';
-    document.getElementById('nav-teams').style.display =
-        user.user_type === 'Manager' ? 'flex' : 'none';
-    document.getElementById('nav-regions').style.display =
-        user.user_type === 'Manager' ? 'flex' : 'none';
-    document.getElementById('nav-users').style.display =
-        user.user_type === 'Manager' ? 'flex' : 'none';
-    document.getElementById('nav-drinks').style.display =
-        user.user_type === 'Manager' ? 'flex' : 'none';
+    // Staff 看不到管理員功能（前端畫面控制，後端仍會擋權限）
+    const isManager = user.user_type === 'Manager';
+    ['sales', 'teams', 'regions', 'drinks', 'users'].forEach(tab => {
+        const nav = document.getElementById('nav-' + tab);
+        if (!nav) return;
+        if (isManager) {
+            nav.style.display = 'flex';
+        } else {
+            // Staff 沒有這些管理權限，直接從左側欄位移除，避免只隱藏失效時還看得到。
+            nav.remove();
+        }
+    });
 
     switchTab('dashboard');
 }

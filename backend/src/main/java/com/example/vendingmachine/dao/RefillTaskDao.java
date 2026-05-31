@@ -70,6 +70,17 @@ public class RefillTaskDao {
         return jdbcTemplate.query(sql, refillTaskMapper, staffId);
     }
 
+    public boolean isTaskAssignedToStaff(Long refillTaskId, Long staffId) {
+        String sql = """
+                SELECT COUNT(*)
+                FROM RefillTask r
+                JOIN Staff s ON r.team_id = s.team_id
+                WHERE r.refilltask_id = ? AND s.user_id = ?
+                """;
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, refillTaskId, staffId);
+        return count != null && count > 0;
+    }
+
     public Optional<RefillTask> findByRefillTaskId(Long refillTaskId) {
         String sql = "SELECT r.refilltask_id, r.team_id, r.region_id, r.machine_id, r.task_date, r.task_type, r.created_time, r.status, " +
              "rg.region_name, vm.machine_name " +
@@ -149,6 +160,12 @@ public class RefillTaskDao {
                 ORDER BY rd.refilldetail_id
                 """;
         return jdbcTemplate.queryForList(sql, refillTaskId);
+    }
+
+    public Optional<Long> findTaskIdByDetailId(Long refillDetailsId) {
+        String sql = "SELECT refilltask_id FROM RefillDetail WHERE refilldetail_id = ?";
+        List<Long> result = jdbcTemplate.query(sql, (rs, rowNum) -> rs.getLong("refilltask_id"), refillDetailsId);
+        return result.stream().findFirst();
     }
 
     public void deleteDetailsByTaskId(Long refillTaskId) {

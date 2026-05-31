@@ -9,6 +9,11 @@
 let currentTab = 'dashboard';
 
 function switchTab(tab) {
+    const user = getCurrentUser();
+    if (['users', 'drinks', 'sales', 'teams', 'regions'].includes(tab) && (!user || user.user_type !== 'Manager')) {
+        tab = 'dashboard';
+    }
+
     currentTab = tab;
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
     const el = document.getElementById('nav-' + tab);
@@ -36,25 +41,27 @@ function refreshCurrentTab() {
  */
 async function renderDashboard(area) {
     area.innerHTML = loadingHTML('載入概覽中...');
+    const user = getCurrentUser();
+    const isManager = user?.user_type === 'Manager';
 
     let machines, tasks;
     if (USE_MOCK) {
         machines = MOCK.machines;
         tasks    = MOCK.tasks;
     } else {
-        // GET /machines → { success, data: [ {machine_id, machine_name, region_name, status, ...} ] }
+        const machinePath = isManager ? '/machines' : `/staff/${user.user_id}/machines`;
+        const taskPath = isManager ? '/refill-tasks' : `/staff/${user.user_id}/refill-tasks`;
         const [mRes, tRes] = await Promise.all([
-            apiFetch('GET', '/machines'),
-            apiFetch('GET', '/refill-tasks'),
+            apiFetch('GET', machinePath),
+            apiFetch('GET', taskPath),
         ]);
-        machines = (await mRes.json()).data;
-        tasks    = (await tRes.json()).data;
+        machines = (await mRes.json()).data || [];
+        tasks    = (await tRes.json()).data || [];
     }
 
-    const user = getCurrentUser();
-    const pending  = tasks.filter(t => t.status === 'Pending').length;
-    const critical = machines.filter(m => m.status === 'Critical').length;
-    const low      = machines.filter(m => m.status === 'Low').length;
+    const pending  = tasks.filter(t => t.status !== 'Completed').length;
+    const critical = machines.filter(m => (m.status || m.reported_status) === 'Critical').length;
+    const low      = machines.filter(m => (m.status || m.reported_status) === 'Low').length;
 
     area.innerHTML = `
         <div class="page-header">
@@ -93,11 +100,11 @@ async function renderDashboard(area) {
                         <td style="font-weight:700">${escapeHtml(m.machine_name)}</td>
                             <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">#${m.machine_id}</span>
                         </td>
-                        <td style="color:var(--muted)">${m.region_name}</td>
+                        <td style="color:var(--muted)">${m.region_name || m.regionName || '—'}</td>
                         <td style="font-size:12px;color:var(--muted)">
-                            ${(m.inventory||[]).map(i => `${i.drink_name}: ${i.quantity}`).join(' ／ ')}
+                            ${(m.inventory||[]).map(i => `${i.drink_name || i.drinkName}: ${i.quantity}`).join(' ／ ')}
                         </td>
-                        <td>${statusBadge(m.status)}</td>
+                        <td>${statusBadge(m.status || m.reported_status)}</td>
                     </tr>`).join('')}
                 </tbody>
             </table>
@@ -151,8 +158,11 @@ async function renderUsers(area, keyword = '') {
                                 <td>${u.team_name || (u.team_id ? '第 ' + u.team_id + ' 組' : '—')}</td>
                                 <td>${u.region_name || '—'}</td>
                                 <td>${u.user_type === 'Staff'
-                                    ? `<button class="btn btn-primary btn-sm" onclick="resetStaffPassword(${u.user_id}, '${String(u.user_name).replace(/'/g, "\\'")}')">重設密碼</button>`
-                                    : '<span style="color:var(--muted);font-size:12px">—</span>'}</td>
+                                    ? `<div style="display:flex;gap:6px;flex-wrap:wrap">
+                                        <button class="btn btn-primary btn-sm" onclick="resetStaffPassword(${u.user_id}, '${String(u.user_name).replace(/'/g, "\\'")}')">重設密碼</button>
+                                        <button class="btn btn-danger btn-sm" onclick="deleteStaffAccount(${u.user_id}, '${String(u.user_name).replace(/'/g, "\\'")}')">刪除</button>
+                                      </div>`
+                                    : '<span style="color:var(--muted);font-size:12px">Manager 不可刪除</span>'}</td>
                             </tr>`).join('')}
                     </tbody>
                 </table>
@@ -195,6 +205,26 @@ async function resetStaffPassword(userId, userName) {
     } catch (e) {
         console.error(e);
         showToast('❌ 無法連線至伺服器重設密碼');
+    }
+}
+
+async function deleteStaffAccount(userId, userName) {
+    if (!confirm(`確定要刪除 Staff [${userName}] 的帳號嗎？\n\n這會使用後端 deleteAccountOnly，刪除 Account 資料，該使用者之後將無法登入。`)) {
+        return;
+    }
+
+    try {
+        const res = await apiFetch('PUT', `/auth/users/${userId}/status`);
+        const data = await res.json();
+        if (data.success) {
+            showToast(`✅ 已刪除 ${userName} 的登入帳號`);
+            renderUsers(document.getElementById('main-content'), document.getElementById('user-search')?.value || '');
+        } else {
+            showToast('❌ 刪除失敗：' + (data.message || '未知錯誤'));
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('❌ 無法連線至伺服器刪除帳號');
     }
 }
 

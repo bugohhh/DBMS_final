@@ -262,10 +262,22 @@ public Map<String, Object> register(@RequestBody Map<String, Object> request) {
             response.put("message", "權限不足，只有管理員能停用帳號");
             return response;
         }
+
+        Map<String, Object> targetUser = authService.fetchUserById(userId);
+        if (targetUser == null) {
+            response.put("success", false);
+            response.put("message", "找不到該使用者");
+            return response;
+        }
+        if (!"Staff".equals(String.valueOf(targetUser.get("user_type")))) {
+            response.put("success", false);
+            response.put("message", "只能刪除 Staff 帳號，不能刪除 Manager");
+            return response;
+        }
         
         authService.deleteAccountOnly(userId);
         response.put("success", true);
-        response.put("message", "User status updated (Account disabled) successfully");
+        response.put("message", "Staff account deleted successfully");
         return response;
     }
 }

@@ -34,22 +34,30 @@ async function renderTasks(area) {
     const isManager = user.user_type === 'Manager';
 
     let tasks = [];
+    let myRefillTasks = [];
     if (USE_MOCK) {
         tasks = MOCK.tasks;
+        myRefillTasks = isManager ? [] : MOCK.tasks;
     } else {
         try {
-            const path = isManager
-                ? '/refill-tasks'
-                : `/staff/${user.user_id}/refill-tasks`;
-            const res = await apiFetch('GET', path);
-            if (!res || !res.ok) throw new Error(`API 返回錯誤: ${res?.status || 'unknown'}`);
-            const data = await res.json();
-            if (data.success && Array.isArray(data.data)) {
-                tasks = data.data;
-            } else if (Array.isArray(data)) {
-                tasks = data;
-            } else if (data.data && Array.isArray(data.data)) {
-                tasks = data.data;
+            if (isManager) {
+                const [allRes, myRes] = await Promise.all([
+                    apiFetch('GET', '/refill-tasks'),
+                    apiFetch('GET', `/staff/${user.user_id}/refill-tasks`)
+                ]);
+                if (!allRes || !allRes.ok) throw new Error(`API 返回錯誤: ${allRes?.status || 'unknown'}`);
+                const allData = await allRes.json();
+                tasks = normalizeTaskList(allData);
+
+                // Manager 也可能同時存在 Staff 表、被指派補貨任務；這裡載入他自己的 staff 任務卡片。
+                if (myRes && myRes.ok) {
+                    myRefillTasks = normalizeTaskList(await myRes.json());
+                }
+            } else {
+                const res = await apiFetch('GET', `/staff/${user.user_id}/refill-tasks`);
+                if (!res || !res.ok) throw new Error(`API 返回錯誤: ${res?.status || 'unknown'}`);
+                tasks = normalizeTaskList(await res.json());
+                myRefillTasks = tasks;
             }
         } catch (e) {
             console.error('載入補貨任務失敗:', e);
@@ -60,14 +68,13 @@ async function renderTasks(area) {
         }
     }
 
-    // Staff 走新版頁面
+    // Staff 走新版頁面；Manager 若同時是 Staff，下面也會加上同一套「我的補貨任務」。
     if (!isManager) {
-        renderStaffTasksPage(area, tasks);
+        renderStaffTasksPage(area, myRefillTasks);
         return;
     }
 
-    // Manager 原本頁面
-    const myTeamId = !isManager && tasks.length > 0 ? tasks[0].teamId : null;
+    const managerStaffSection = renderManagerStaffTaskSection(myRefillTasks);
     area.innerHTML = `
         <div class="page-header">
             <h2>補貨任務管理</h2>
@@ -104,7 +111,45 @@ async function renderTasks(area) {
                     </tr>`).join('')}
                 </tbody>
             </table>
-        </div>`;
+        </div>
+        ${managerStaffSection}`;
+}
+
+function normalizeTaskList(data) {
+    if (data && data.success && Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    return [];
+}
+
+function renderManagerStaffTaskSection(tasks) {
+    if (!tasks || tasks.length === 0) return '';
+    const myTeamId = tasks[0].teamId;
+    const pending = tasks.filter(t => t.status !== 'Completed');
+    const completed = tasks.filter(t => t.status === 'Completed');
+
+    window._staffPending = pending;
+    window._staffCompleted = completed;
+
+    setTimeout(() => switchStaffTab('pending'), 0);
+
+    return `
+        <div class="page-header" style="margin-top:28px;">
+            <h2>我的補貨任務</h2>
+            <p>Manager 若同時被編入補貨班組，也可以像 Staff 一樣回報補貨完成。</p>
+            ${myTeamId ? `<p style="color:var(--accent);font-weight:700;margin-top:6px">👤 您目前所屬班組：第 ${myTeamId} 組</p>` : ''}
+        </div>
+        <div style="display:flex;gap:12px;border-bottom:1px solid var(--border);margin-bottom:20px">
+            <button id="staff-tab-pending" onclick="switchStaffTab('pending')"
+                style="background:none;border:none;padding:8px 16px;cursor:pointer;color:var(--text);font-weight:500;border-bottom:2px solid var(--accent);font-family:inherit;">
+                待處理任務（${pending.length}）
+            </button>
+            <button id="staff-tab-completed" onclick="switchStaffTab('completed')"
+                style="background:none;border:none;padding:8px 16px;cursor:pointer;color:var(--muted);font-weight:500;font-family:inherit;">
+                已完成任務（${completed.length}）
+            </button>
+        </div>
+        <div id="staff-tasks-container"></div>`;
 }
 
 function renderStaffTasksPage(area, tasks) {

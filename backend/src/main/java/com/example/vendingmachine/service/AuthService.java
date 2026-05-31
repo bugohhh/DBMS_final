@@ -167,7 +167,7 @@ public class AuthService {
                 SELECT u.user_id, u.user_name, u.user_type, a.account,
                        s.team_id, t.team_name, t.region_id, r.region_name
                 FROM `User` u
-                LEFT JOIN `Account` a ON u.user_id = a.user_id
+                JOIN `Account` a ON u.user_id = a.user_id
                 LEFT JOIN Staff s ON u.user_id = s.user_id
                 LEFT JOIN Team t ON s.team_id = t.team_id
                 LEFT JOIN Region r ON t.region_id = r.region_id
@@ -182,7 +182,7 @@ public class AuthService {
                 SELECT u.user_id, u.user_name, u.user_type, a.account,
                        s.team_id, t.team_name, t.region_id, r.region_name
                 FROM `User` u
-                LEFT JOIN `Account` a ON u.user_id = a.user_id
+                JOIN `Account` a ON u.user_id = a.user_id
                 LEFT JOIN Staff s ON u.user_id = s.user_id
                 LEFT JOIN Team t ON s.team_id = t.team_id
                 LEFT JOIN Region r ON t.region_id = r.region_id
@@ -224,7 +224,7 @@ public class AuthService {
                 SELECT u.user_id, u.user_name, u.user_type, a.account,
                        s.team_id, t.team_name, t.region_id, r.region_name
                 FROM `User` u
-                LEFT JOIN `Account` a ON u.user_id = a.user_id
+                JOIN `Account` a ON u.user_id = a.user_id
                 LEFT JOIN Staff s ON u.user_id = s.user_id
                 LEFT JOIN Team t ON s.team_id = t.team_id
                 LEFT JOIN Region r ON t.region_id = r.region_id
