@@ -151,6 +151,11 @@ public class RefillTaskDao {
         return jdbcTemplate.queryForList(sql, refillTaskId);
     }
 
+    public void deleteDetailsByTaskId(Long refillTaskId) {
+        String sql = "DELETE FROM RefillDetail WHERE refilltask_id = ?";
+        jdbcTemplate.update(sql, refillTaskId);
+    }
+
     public RefillDetail updateRefillDetail(Long refillDetailsId, RefillDetail refillDetail) {
         // Minimal implementation: update actual_quantity and refill_time.
         String sql = "UPDATE RefillDetail SET actual_quantity = ?, refill_time = NOW() WHERE refilldetail_id = ?";

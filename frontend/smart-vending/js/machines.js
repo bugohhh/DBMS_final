@@ -185,7 +185,6 @@ async function submitAddMachine() {
         return;
     }
 
-    // 收集庫存資料
     const container = document.getElementById('new-vm-inventory');
     const drinkIds = JSON.parse(container.dataset.drinks || '[]');
     const inventoryItems = drinkIds.map(drinkId => ({
@@ -209,29 +208,42 @@ async function submitAddMachine() {
         const newId = MOCK.machines.length > 0 ? Math.max(...MOCK.machines.map(m => m.machine_id)) + 1 : 1;
         MOCK.machines.push({ machine_id: newId, machine_name, region_name, status: "Normal", inventory: [] });
     } else {
+        let newMachineId = null;
+        const createdInventoryIds = [];
         try {
-            // 1. 新增機台
             const res = await apiFetch('POST', '/machines', { machine_name, region_name, location, machine_type });
             const data = await res.json();
-            console.log('新增機台回傳:', JSON.stringify(data));
-            const newMachineId = data.data?.machineId || data.data?.machine_id;
-            console.log('newMachineId:', newMachineId);
+            newMachineId = data.data?.machineId || data.data?.machine_id;
 
-            // 2. 新增庫存
             if (newMachineId) {
                 for (const item of inventoryItems) {
-                    await apiFetch('POST', '/inventory', {
+                    const invRes = await apiFetch('POST', '/inventory', {
                         machineId: newMachineId,
                         drinkId: item.drinkId,
                         quantity: item.quantity,
                         price: item.price,
                         lowStockThreshold: 5,
-                        capacity: item.capacity,
+                        capacity: item.capacity || 30,
                     });
+                    if (invRes.ok) {
+                        const invData = await invRes.json();
+                        if (invData.data?.inventoryId) {
+                            createdInventoryIds.push(invData.data.inventoryId);
+                        }
+                    } else {
+                        throw new Error('庫存新增失敗: drink_id=' + item.drinkId);
+                    }
                 }
             }
-        } catch(e) {
-            showToast('❌ 新增失敗');
+        } catch (e) {
+            console.error('新增機台失敗，開始回滾...', e);
+            for (const invId of createdInventoryIds) {
+                try { await apiFetch('DELETE', `/inventory/${invId}`); } catch (ignored) {}
+            }
+            if (newMachineId) {
+                try { await apiFetch('DELETE', `/machines/${newMachineId}`); } catch (ignored) {}
+            }
+            showToast('❌ 新增失敗，已自動回滾');
             return;
         }
     }
@@ -245,6 +257,16 @@ async function submitAddMachine() {
     switchTab('machines');
     window._newDrinkDefaultPrice = null;
 }
+
+    closeModal('modal-add-machine');
+    showToast(`✅ 機台 ${machine_name} 已新增！`);
+    document.getElementById('new-vm-name').value = '';
+    document.getElementById('new-vm-location').value = '';
+    document.getElementById('new-vm-area').value = '';
+    document.getElementById('new-vm-type').value = 'Smart';
+    switchTab('machines');
+    window._newDrinkDefaultPrice = null;
+
 
 
 async function renderStaffMachines(area, user) {
@@ -528,3 +550,4 @@ async function addDrinkToMachine(machineId, drinkId) {
         showToast('❌ 新增失敗：' + e.message);
     }
 }
+

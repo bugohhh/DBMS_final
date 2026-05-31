@@ -376,19 +376,20 @@ async function submitStaffComplete() {
         }
     });
 
-    try {
-        const res = await apiFetch('PUT', `/refill-tasks/${taskId}/complete`, {
-            machine_id: task?.machineId || null,
-            items: items
-        });
-        if (!res.ok) throw new Error('API 返回錯誤: ' + res.status);
-        showToast('✅ 任務已回報完成！');
-        closeModal('modal-staff-complete');
-        switchTab('tasks');
-    } catch (e) {
-        showToast('❌ 回報失敗：' + e.message);
+        try {
+            const res = await apiFetchWithRetry('PUT', `/refill-tasks/${taskId}/complete`, {
+                machine_id: task?.machineId || null,
+                items: items
+            });
+            if (!res.ok) throw new Error('API 返回錯誤: ' + res.status);
+            showToast('✅ 任務已回報完成！');
+            closeModal('modal-staff-complete');
+            switchTab('tasks');
+        } catch (e) {
+            showToast('❌ 回報失敗，請稍後再試：' + e.message);
+        }
     }
-}
+
 
 //新增任務裡找機台
 function filterMachineOptions() {

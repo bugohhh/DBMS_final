@@ -90,3 +90,29 @@ function clearAuth() {
 function isAuthenticated() {
     return !!accessToken;
 }
+
+//重試機制
+async function apiFetchWithRetry(method, path, body = null, maxRetries = 2) {
+    let lastError;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            const res = await apiFetch(method, path, body);
+            if (res.ok || res.status === 400 || res.status === 403 || res.status === 404) {
+                return res; // 成功或明確的業務錯誤，不重試
+            }
+            if (res.status >= 500 && attempt < maxRetries) {
+                console.warn(`API ${method} ${path} 返回 ${res.status}，重試第 ${attempt + 1} 次...`);
+                await new Promise(r => setTimeout(r, 1000 * (attempt + 1))); // 漸進式等待
+                continue;
+            }
+            return res;
+        } catch (e) {
+            lastError = e;
+            if (attempt < maxRetries) {
+                console.warn(`API ${method} ${path} 失敗，重試第 ${attempt + 1} 次...`, e.message);
+                await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            }
+        }
+    }
+    throw lastError || new Error('API 請求失敗，已重試 ' + maxRetries + ' 次');
+}

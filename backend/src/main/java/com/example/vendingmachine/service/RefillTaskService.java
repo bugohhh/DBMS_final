@@ -78,11 +78,13 @@ public class RefillTaskService {
         return getRefillTasksByRefillTaskId(refillTaskId);
     }
 
+    @Transactional
     public void deleteRefillTask(Long refillTaskId) {
         if (refillTaskId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refill task ID is required");
         }
-        boolean deleted = refillTaskDao.delete(refillTaskId);
+        refillTaskDao.deleteDetailsByTaskId(refillTaskId); // 先刪明細
+        boolean deleted = refillTaskDao.delete(refillTaskId); // 再刪任務
         if (!deleted) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Refill task not found");
         }
