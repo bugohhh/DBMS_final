@@ -171,10 +171,29 @@ tr:hover td { background: var(--surface2); }
 .modal {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 20px; padding: 32px; width: 480px;
+    max-height: calc(100vh - 48px); overflow-y: auto;
     animation: slideUp .25s ease;
 }
 .modal h3 { font-size: 18px; font-weight: 900; margin-bottom: 20px; }
 .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+.modal-add-machine {
+    width: min(760px, calc(100vw - 32px));
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+.modal-add-machine .machine-inventory-picker {
+    display: flex; flex-direction: column; gap: 10px;
+    max-height: min(320px, 36vh);
+    overflow-y: auto;
+    padding-right: 6px;
+}
+.modal-add-machine .form-group { margin-bottom: 14px; }
+.region-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.region-card { display: flex; flex-direction: column; gap: 14px; }
+.region-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.region-title { font-size:18px; font-weight:900; }
+.region-meta { color:var(--muted); font-size:12px; margin-top:4px; line-height:1.5; }
+.region-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:auto; }
 
 /* ── CHART BAR ── */
 .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }

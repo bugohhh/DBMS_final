@@ -85,6 +85,9 @@
             <button class="nav-item manager-only" id="nav-teams" onclick="switchTab('teams')" style="display:none">
                 <i class="fas fa-users"></i> 團隊管理
             </button>
+            <button class="nav-item manager-only" id="nav-regions" onclick="switchTab('regions')" style="display:none">
+                <i class="fas fa-map-marked-alt"></i> 地區管理
+            </button>
             <button class="nav-item manager-only" id="nav-users" onclick="switchTab('users')" style="display:none">
                 <i class="fas fa-user-shield"></i> 帳號管理
             </button>
@@ -180,7 +183,7 @@
 
 <!-- ═══════════════ MODAL: 新增機台 ═══════════════ -->
 <div class="modal-backdrop" id="modal-add-machine">
-    <div class="modal" style="width:560px;max-height:80vh;overflow-y:auto;">
+    <div class="modal modal-add-machine">
         <h3>➕ 新增販賣機台</h3>
         <div class="form-group">
             <label>機台名稱</label>
@@ -188,7 +191,9 @@
         </div>
         <div class="form-group">
             <label>地區</label>
-            <input type="text" id="new-vm-area" placeholder="例：文山區" />
+            <select id="new-vm-area">
+                <option value="">請先載入地區...</option>
+            </select>
         </div>
         <div class="form-group">
             <label>位置描述</label>
@@ -206,7 +211,7 @@
                 <label style="margin:0;">初始庫存設定</label>
                 <button type="button" class="btn btn-ghost btn-sm" onclick="openModal('modal-add-drink')">+ 新增飲料</button>
             </div>
-            <div id="new-vm-inventory" style="display:flex;flex-direction:column;gap:10px;">
+            <div id="new-vm-inventory" class="machine-inventory-picker">
                 <div style="color:var(--muted);font-size:13px">載入飲料清單...</div>
             </div>
         </div>
@@ -340,9 +345,40 @@
             <label>地區名稱</label>
             <input type="text" id="new-region-name" placeholder="例：中正區" />
         </div>
+        <div class="form-group">
+            <label>負責 Manager User ID</label>
+            <input type="number" id="new-region-manager-id" placeholder="例：1" />
+        </div>
+        <div class="form-group">
+            <label>描述（選填）</label>
+            <input type="text" id="new-region-description" placeholder="例：政大周邊校園機台" />
+        </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" onclick="closeModal('modal-add-region')">取消</button>
             <button class="btn btn-primary" onclick="submitAddRegion()">新增</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════ MODAL: 編輯地區 ═══════════════ -->
+<div class="modal-backdrop" id="modal-edit-region">
+    <div class="modal">
+        <h3>✏️ 編輯地區 <span id="edit-region-id" style="color:var(--muted);font-size:14px"></span></h3>
+        <div class="form-group">
+            <label>地區名稱</label>
+            <input type="text" id="edit-region-name" />
+        </div>
+        <div class="form-group">
+            <label>負責 Manager User ID</label>
+            <input type="number" id="edit-region-manager-id" />
+        </div>
+        <div class="form-group">
+            <label>描述（選填）</label>
+            <input type="text" id="edit-region-description" />
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-edit-region')">取消</button>
+            <button class="btn btn-primary" onclick="submitEditRegion()">儲存</button>
         </div>
     </div>
 </div>
@@ -395,6 +431,7 @@
 <script src="js/tasks.js"></script>
 <script src="js/sales.js"></script>
 <script src="js/drinks.js"></script>
+<script src="js/regions.js"></script>
 <script src="js/app.js"></script>
 <script src="js/teams.js"></script>
 

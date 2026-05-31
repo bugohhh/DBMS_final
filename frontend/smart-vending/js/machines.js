@@ -121,9 +121,23 @@ async function openAddMachineModal() {
     container.innerHTML = '<div style="color:var(--muted);font-size:13px">載入中...</div>';
 
     try {
-        const res = await fetch(`${BASE_URL}/public/drinks`);
-        const data = await res.json();
+        const regionSelect = document.getElementById('new-vm-area');
+        regionSelect.innerHTML = '<option value="">-- 選擇地區 --</option>';
+
+        const [drinkRes, regionRes] = await Promise.all([
+            fetch(`${BASE_URL}/public/drinks`),
+            apiFetch('GET', '/regions')
+        ]);
+        const data = await drinkRes.json();
         const drinks = data.data || [];
+        const regionData = await regionRes.json();
+        const regions = Array.isArray(regionData) ? regionData : (regionData.data || []);
+
+        if (regions.length === 0) {
+            regionSelect.innerHTML = '<option value="">尚無地區，請先到地區管理新增</option>';
+        } else {
+            regionSelect.innerHTML += regions.map(r => `<option value="${escapeHtml(r.name || '')}">${escapeHtml(r.name || '')}${r.managerName ? '（' + escapeHtml(r.managerName) + '）' : ''}</option>`).join('');
+        }
 
         container.innerHTML = `
             <div style="color:var(--muted);font-size:13px;margin-bottom:6px;">
@@ -158,7 +172,10 @@ async function openAddMachineModal() {
 
         container.dataset.drinks = JSON.stringify(drinks.map(d => d.drinkId));
     } catch(e) {
-        container.innerHTML = '<div style="color:var(--danger);font-size:13px">載入飲料清單失敗</div>';
+        console.error('載入新增機台資料失敗:', e);
+        container.innerHTML = '<div style="color:var(--danger);font-size:13px">載入飲料或地區清單失敗</div>';
+        const regionSelect = document.getElementById('new-vm-area');
+        if (regionSelect) regionSelect.innerHTML = '<option value="">地區載入失敗</option>';
     }
 }
 function toggleNewMachineDrink(drinkId) {
