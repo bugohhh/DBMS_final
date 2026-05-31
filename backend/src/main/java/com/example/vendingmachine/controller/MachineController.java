@@ -4,6 +4,7 @@ import com.example.vendingmachine.dto.ApiResponse;
 import com.example.vendingmachine.dto.InventoryItemDTO;
 import com.example.vendingmachine.dto.MachineDTO;
 import com.example.vendingmachine.model.VendingMachine;
+import com.example.vendingmachine.model.InputSanitizer;
 import com.example.vendingmachine.service.BaseDataService;
 import com.example.vendingmachine.service.MachineAndDrinkService; 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,31 +78,28 @@ public class MachineController {
 
 
     @PostMapping("/machines")
-    public ResponseEntity<?> createMachine(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> createMachine(@RequestBody Map<String, String> request) {
         try {
-            String machine_name = (String) request.get("machine_name");
-            String location = (String) request.get("location");
-            String region_name = (String) request.get("region_name");
-            String machine_type = request.get("machine_type") == null ? "Smart" : String.valueOf(request.get("machine_type"));
-            
-            if (machine_name == null || region_name == null) {
-                return ResponseEntity.badRequest().body(
-                    ApiResponse.fail("缺少必填欄位：machine_name 或 region_name")
-                );
-            }
-            
-            // 建立 VendingMachine 對象
+            String machineName = InputSanitizer.sanitize(request.get("machine_name"));
+            String regionName = InputSanitizer.sanitize(request.get("region_name"));
+            String location = InputSanitizer.sanitize(request.get("location"));
+            String machineType = request.get("machine_type") == null ? "Smart" : InputSanitizer.sanitize(request.get("machine_type"));
+
+            InputSanitizer.validateNotBlank(machineName, "機台名稱");
+            InputSanitizer.validateNotBlank(regionName, "地區");
+            InputSanitizer.validateMaxLength(machineName, "機台名稱", 100);
+            InputSanitizer.validateMaxLength(regionName, "地區", 100);
+
             VendingMachine machine = new VendingMachine();
-            machine.setMachineName(machine_name);
+            machine.setMachineName(machineName);
             machine.setLocation(location);
-            machine.setMachineType(machine_type);
-            // 暫時固定 region_id = 1，實際應根據 region_name 從資料庫查詢 region_id
-            // 根據 region_name 查詢 region_id
-            Long regionId = baseDataService.getRegionIdByName(region_name);
+            machine.setMachineType(machineType);
+
+            Long regionId = baseDataService.getRegionIdByName(regionName);
             machine.setRegionId(regionId);
-            
+
             VendingMachine saved = machineAndDrinkService.createMachine(machine);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "機台新增成功");
@@ -109,13 +107,13 @@ public class MachineController {
             data.put("machine_id", saved.getMachineId());
             data.put("machine_name", saved.getMachineName());
             response.put("data", data);
-            
+
             return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.fail(e.getMessage()));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body(
-                ApiResponse.fail("新增機台失敗：" + e.getMessage())
-            );
+            return ResponseEntity.internalServerError().body(ApiResponse.fail("新增失敗：" + e.getMessage()));
         }
     }
 

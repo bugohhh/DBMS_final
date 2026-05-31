@@ -6,10 +6,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
+
 
 
 @Service
@@ -20,6 +22,8 @@ public class AuthService {
 
     // 新增 JdbcTemplate：讓 AuthService 可以直接查 LoginSession / Manager 來驗證 token 權限。
     private final JdbcTemplate jdbcTemplate;
+
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // 使用 constructor injection，Spring Boot 會自動把 AuthDao 和 JdbcTemplate 注入進來。
     public AuthService(AuthDao authDao, JdbcTemplate jdbcTemplate) {
@@ -55,10 +59,11 @@ public class AuthService {
     if (key == null) throw new RuntimeException("無法取得新增的 user_id");
     long userId = key.longValue();
 
-    // 2. 插入 Account（密碼直接存，正式環境應該 hash）
+    // 2. 插入 Account
+    String hashedPassword = passwordEncoder.encode(password);
     jdbcTemplate.update(
         "INSERT INTO Account (user_id, account, password_hash, user_name, user_type) VALUES (?, ?, ?, ?, 'Staff')",
-        userId, account, password, userName);
+        userId, account, hashedPassword, userName);
 
     // 3. 插入 Staff
     if (teamId != null) {
@@ -193,23 +198,24 @@ public class AuthService {
 
     // 4. 修改密碼大腦：先比對舊密碼，對了才改新密碼
     public boolean updateUserPassword(int userId, String oldPassword, String newPassword) {
-        // 先查舊密碼對不對
-        String checkSql = "SELECT COUNT(*) FROM `Account` WHERE `user_id` = ? AND `password_hash` = ?";
-        Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, userId, oldPassword);
-        
-        if (count != null && count > 0) {
-            // 對了，更新成新密碼
-            String updateSql = "UPDATE `Account` SET `password_hash` = ? WHERE `user_id` = ?";
-            jdbcTemplate.update(updateSql, newPassword, userId);
-            return true;
+        String sql = "SELECT password_hash FROM Account WHERE user_id = ?";
+        try {
+            String stored = jdbcTemplate.queryForObject(sql, String.class, userId);
+            if (stored != null && passwordEncoder.matches(oldPassword, stored)) {
+                String newHash = passwordEncoder.encode(newPassword);
+                jdbcTemplate.update("UPDATE Account SET password_hash = ? WHERE user_id = ?", newHash, userId);
+                return true;
+            }
+        } catch (DataAccessException e) {
+            // ignore
         }
-        return false; // 舊密碼不對，回傳失敗
+        return false;
     }
 
     // 5. 管理者強制改密碼大腦
     public void forceResetPassword(int userId, String newPassword) {
-        String sql = "UPDATE `Account` SET `password_hash` = ? WHERE `user_id` = ?";
-        jdbcTemplate.update(sql, newPassword, userId);
+        String hashedPassword = passwordEncoder.encode(newPassword);
+        jdbcTemplate.update("UPDATE Account SET password_hash = ? WHERE user_id = ?", hashedPassword, userId);
     }
 
     // 6. 查單一使用者大腦

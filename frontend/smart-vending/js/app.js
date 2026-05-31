@@ -89,7 +89,7 @@ async function renderDashboard(area) {
                 <tbody>
                 ${machines.map(m => `
                     <tr>
-                        <td style="font-weight:700">${m.machine_name}<br>
+                        <td style="font-weight:700">${escapeHtml(m.machine_name)}</td>
                             <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">#${m.machine_id}</span>
                         </td>
                         <td style="color:var(--muted)">${m.region_name}</td>
@@ -263,3 +263,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
