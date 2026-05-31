@@ -89,6 +89,54 @@ async function renderSales(area, selectedRegion = 'all') {
 
         setTimeout(() => document.querySelectorAll('.bar-fill').forEach(el => el.style.width = el.dataset.pct + '%'), 50);
     } catch(e) {
-        area.innerHTML = `<div class="card" style="padding:24px;color:var(--danger)">銷售分析載入失敗：${e.message}</div>`;
+        console.warn('銷售分析 API 不可用，使用 mock data', e);
+        // fallback to mock data
+        const topDrinks = MOCK.topDrinks;
+        const salesSummary = MOCK.salesSummary;
+        const regions = [{ id: 1, name: '大安區' }, { id: 2, name: '文山區' }, { id: 3, name: '信義區' }];
+        const maxQty = Math.max(...topDrinks.map(d => d.total_quantity));
+        const totalQty = topDrinks.reduce((a, b) => a + b.total_quantity, 0);
+        const totalRev = topDrinks.reduce((a, b) => a + b.total_revenue, 0);
+        const regionOptions = `<option value="all" selected>🌍 所有地區</option>` +
+            regions.map(r => `<option value="${r.id}">📍 ${r.name}</option>`).join('');
+
+        area.innerHTML = `
+            <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-end;">
+                <div><h2>銷售分析</h2><p>銷售數量、飲料名稱與營收統計（示範資料）</p></div>
+                <div class="form-group" style="margin-bottom:0; min-width:220px;">
+                    <select id="region-filter" onchange="renderSales(document.getElementById('main-content'), this.value)"
+                            style="width:100%; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-family:inherit;">
+                        ${regionOptions}
+                    </select>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <div style="font-weight:700;margin-bottom:24px">熱門商品 Top ${topDrinks.length}</div>
+                    ${topDrinks.map((d, i) => `
+                        <div class="bar-row">
+                            <div class="bar-label">${i+1}. ${d.drink_name}<br><span style="font-size:11px;color:var(--muted)">營收 NT$ ${d.total_revenue.toLocaleString()}</span></div>
+                            <div class="bar-track"><div class="bar-fill" style="width:0%" data-pct="${Math.round(d.total_quantity/maxQty*100)}"></div></div>
+                            <div class="bar-val">${d.total_quantity.toLocaleString()}</div>
+                        </div>`).join('')}
+                </div>
+                <div class="card">
+                    <div style="font-weight:700;margin-bottom:20px">週期概況</div>
+                    <div class="card stat-card" style="background:var(--surface2);margin-bottom:12px"><div class="label">總銷售瓶數</div><div class="value accent-blue">${totalQty.toLocaleString()}</div></div>
+                    <div class="card stat-card" style="background:var(--surface2);margin-bottom:12px"><div class="label">總營收</div><div class="value accent-green" style="font-size:28px">NT$ ${totalRev.toLocaleString()}</div></div>
+                    <div class="card stat-card" style="background:var(--surface2)"><div class="label">最暢銷商品</div><div class="value" style="font-size:20px;font-weight:900">${topDrinks[0]?.drink_name || '—'}</div></div>
+                    <div style="margin-top:20px"><div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:12px">每日銷量趨勢</div><div style="display:flex;align-items:flex-end;gap:4px;height:60px">
+                        ${salesSummary.map(s => {
+                            const maxS = Math.max(...salesSummary.map(x => x.total_quantity));
+                            const h = maxS > 0 ? Math.round(s.total_quantity / maxS * 100) : 0;
+                            return `<div style="flex:1;background:var(--accent);opacity:.7;height:${h}%;border-radius:3px 3px 0 0" title="${s.label}: ${s.total_quantity}"></div>`;
+                        }).join('')}
+                    </div>
+                    <div style="display:flex;gap:4px;margin-top:4px">
+                        ${salesSummary.map(s => `<div style="flex:1;font-size:9px;color:var(--muted);text-align:center">${s.label}</div>`).join('')}
+                    </div></div>
+                </div>
+            </div>`;
+        setTimeout(() => document.querySelectorAll('.bar-fill').forEach(el => el.style.width = el.dataset.pct + '%'), 50);
     }
 }
