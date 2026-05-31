@@ -2,6 +2,7 @@ package com.example.vendingmachine.service;
 
 import com.example.vendingmachine.dao.RefillTaskDao;
 import com.example.vendingmachine.model.RefillTask;
+import com.example.vendingmachine.model.Inventory;
 import com.example.vendingmachine.model.RefillDetail;
 
 
@@ -124,6 +125,16 @@ public class RefillTaskService {
         if (targetMachineId != null && items != null) {
             for (Map<String, Object> item : items) {
                 Long drinkId = ((Number) item.get("drink_id")).longValue();
+                // 防止重複完成 — 放在 for 迴圈外面
+                boolean taskLocked = refillTaskDao.markCompleting(refillTaskId);
+                if (!taskLocked) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "此任務已完成或正在處理中");
+                }
+                // for 迴圈裡面
+                Inventory lockedInv = inventoryService.lockInventory(targetMachineId, drinkId);
+                if (lockedInv == null) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "找不到庫存: machine=" + targetMachineId + " drink=" + drinkId);
+                }
                 Integer refillQty = item.get("actual_quantity") == null ? 0 : ((Number) item.get("actual_quantity")).intValue();
                 Integer beforeQty = item.get("before_quantity") == null ? null : ((Number) item.get("before_quantity")).intValue();
                 if (refillQty < 0 || (beforeQty != null && beforeQty < 0)) {

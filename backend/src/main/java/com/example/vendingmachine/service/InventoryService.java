@@ -72,6 +72,28 @@ public class InventoryService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory item not found for this machine and drink");
         }
     }
+
+    public Inventory updateInventoryWithLock(Long inventoryId, Inventory updated) {
+        Integer clientVersion = updated.getVersion();
+        System.out.println("=== 版本檢查 === inventoryId=" + inventoryId + " clientVersion=" + clientVersion);
+        if (clientVersion == null) {
+            clientVersion = 0;
+        }
+        boolean success = inventoryDao.updateWithVersion(
+            inventoryId,
+            updated.getQuantity(),
+            updated.getPrice(),
+            clientVersion
+        );
+        System.out.println("=== 更新結果 === success=" + success);
+        if (!success) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "庫存已被其他人修改，請重新載入後再試");
+        }
+        return getInventoryById(inventoryId);
+    }
+
+
     public void deleteInventory(Long inventoryId){
         boolean deleted = inventoryDao.delete(inventoryId);
         if (!deleted) {
@@ -186,4 +208,15 @@ public class InventoryService {
     public java.math.BigDecimal getInventoryPrice(Long machineId, Long drinkId) {
         return inventoryDao.findPriceByMachineAndDrink(machineId, drinkId);
     }
+
+    //解版本衝突
+    public Inventory getInventoryById(Long inventoryId) {
+        return inventoryDao.findById(inventoryId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "找不到庫存 ID: " + inventoryId));
+    }
+
+    public Inventory lockInventory(Long machineId, Long drinkId) {
+        return inventoryDao.findByMachineAndDrinkForUpdate(machineId, drinkId);
+    }
+    
 }

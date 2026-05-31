@@ -451,18 +451,23 @@ async function submitEditInventory() {
         for (const item of items) {
             const id = item.inventoryId || item.inventory_id;
             const qty = parseInt(document.getElementById(`edit-qty-${id}`)?.value) || 0;
-            const capacity = item.capacity || 30;
-            if (qty > capacity) {
-                showToast(`❌ ${item.drinkName || item.drink_name || '庫存'} 數量不能超過容量 ${capacity}`);
-                return;
-            }
             const price = parseFloat(document.getElementById(`edit-price-${id}`)?.value || item.price || 0);
-            await apiFetch('PUT', `/inventory/${id}`, {
+            console.log('送出更新:', { id, qty, price, version: item.version });
+            const res = await apiFetch('PUT', `/inventory/${id}`, {
                 quantity: qty,
                 price: price,
-                lowStockThreshold: item.lowStockThreshold || item.threshold || 5,
-                capacity: capacity
+                version: item.version || 0,
+                lowStockThreshold: item.lowStockThreshold || 5,
+                capacity: item.capacity || 30
             });
+            if (res.status === 409) {
+                showToast('⚠️ 庫存已被其他人修改，正在重新載入...');
+                const machineId = window._editInvMachineId;
+                const name = document.getElementById('edit-inv-machine-name').textContent.split('（')[0];
+                openEditInventory(machineId, name);
+                return;
+            }
+            if (!res.ok) throw new Error('更新失敗: ' + res.status);
         }
         showToast('✅ 庫存已更新！');
         closeModal('modal-edit-inventory');

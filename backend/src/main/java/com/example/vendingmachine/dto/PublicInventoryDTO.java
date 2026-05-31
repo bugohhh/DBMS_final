@@ -8,6 +8,7 @@ public class PublicInventoryDTO {
     private Integer quantity;
     private Double price;
     private Integer capacity;
+    private Integer version;
 
     // getters & setters
     public Long getInventoryId() { return inventoryId; }
@@ -24,4 +25,6 @@ public class PublicInventoryDTO {
     public void setPrice(Double price) { this.price = price; }
     public Integer getCapacity() { return capacity; }
     public void setCapacity(Integer capacity) { this.capacity = capacity; }
+    public Integer getVersion() { return version; }
+    public void setVersion(Integer version) { this.version = version; }
 }

@@ -170,4 +170,9 @@ public class RefillTaskDao {
         int deleted = jdbcTemplate.update("DELETE FROM RefillTask WHERE refilltask_id = ?", refillTaskId);
         return deleted > 0;
     }
+
+    public boolean markCompleting(Long refillTaskId) {
+        String sql = "UPDATE RefillTask SET status = 'Completing' WHERE refilltask_id = ? AND status != 'Completed' AND status != 'Completing'";
+        return jdbcTemplate.update(sql, refillTaskId) > 0;
+    }
 }

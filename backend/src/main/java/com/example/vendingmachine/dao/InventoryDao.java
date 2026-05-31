@@ -9,6 +9,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -36,6 +37,8 @@ public class InventoryDao {
             inv.setPrice(rs.getBigDecimal("price"));
             inv.setLowStockThreshold(rs.getInt("threshold"));
             inv.setCapacity(rs.getInt("capacity"));
+            inv.setVersion(rs.getInt("version"));
+            
             return inv;
         }
     };
@@ -52,7 +55,7 @@ public class InventoryDao {
 
     public Optional<Inventory> findById(Long inventoryId) {
         String sql = """
-                SELECT inventory_id, machine_id, drink_id, quantity, price, threshold, capacity
+                SELECT inventory_id, machine_id, drink_id, quantity, price, threshold, capacity, version
                 FROM Inventory
                 WHERE inventory_id = ?
                 """;
@@ -161,6 +164,13 @@ public class InventoryDao {
                 """;
         int updated = jdbcTemplate.update(sql, quantitySold, machineId, drinkId, quantitySold);
         return updated > 0;
+    }
+
+    //版本檢查
+    public boolean updateWithVersion(Long inventoryId, int quantity, BigDecimal price, int currentVersion) {
+        String sql = "UPDATE Inventory SET quantity = ?, price = ?, version = version + 1 WHERE inventory_id = ? AND version = ?";
+        int rows = jdbcTemplate.update(sql, quantity, price, inventoryId, currentVersion);
+        return rows > 0; // false 代表版本衝突
     }
 
     public List<Inventory> findLowStock() {
@@ -294,10 +304,8 @@ public class InventoryDao {
 
     public List<PublicInventoryDTO> findByMachineIdWithDrinkName(Long machineId) {
         String sql = """
-            SELECT i.inventory_id, i.machine_id, i.drink_id,
-                d.drink_name, i.quantity, i.price, i.capacity
-            FROM Inventory i
-            JOIN Drink d ON i.drink_id = d.drink_id
+            SELECT i.inventory_id, i.machine_id, i.drink_id, d.drink_name, i.quantity, i.price, i.capacity, i.version
+            FROM Inventory i JOIN Drink d ON i.drink_id = d.drink_id
             WHERE i.machine_id = ?
             """;
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
@@ -309,8 +317,15 @@ public class InventoryDao {
             dto.setQuantity(rs.getInt("quantity"));
             dto.setPrice(rs.getDouble("price"));
             dto.setCapacity(rs.getInt("capacity"));
+            dto.setVersion(rs.getInt("version"));
             return dto;
         }, machineId);
+    }
+
+    public Inventory findByMachineAndDrinkForUpdate(Long machineId, Long drinkId) {
+        String sql = "SELECT * FROM Inventory WHERE machine_id = ? AND drink_id = ? FOR UPDATE";
+        List<Inventory> list = jdbcTemplate.query(sql, inventoryMapper, machineId, drinkId);
+        return list.isEmpty() ? null : list.get(0);
     }
 
 

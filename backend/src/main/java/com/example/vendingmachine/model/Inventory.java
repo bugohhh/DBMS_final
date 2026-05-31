@@ -11,6 +11,7 @@ public class Inventory {
     private BigDecimal price;
     private Integer lowStockThreshold;
     private Integer capacity;
+    private Integer version;
 
     public Long getInventoryId() { return inventoryId; }
     public void setInventoryId(Long inventoryId) { this.inventoryId = inventoryId; }
@@ -29,4 +30,7 @@ public class Inventory {
 
     public Integer getCapacity() { return capacity; }
     public void setCapacity(Integer capacity) { this.capacity = capacity; }
+
+    public Integer getVersion() { return version; }
+    public void setVersion(Integer version) { this.version = version; }
 }

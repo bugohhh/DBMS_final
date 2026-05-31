@@ -68,11 +68,9 @@ public class InventoryController {
     @PutMapping("/inventory/{inventory_id}")
     public ApiResponse<Inventory> updateInventory(
             @PathVariable("inventory_id") Long inventoryId,
-            @RequestBody Inventory inventory,
-            @RequestHeader(value = "Authorization", required = false) String authorization
+            @RequestBody Inventory inventory
     ) {
-        // requireValidToken(authorization);
-        return ApiResponse.success("Inventory updated", inventoryService.updateInventory(inventoryId, inventory));
+        return ApiResponse.success("Inventory updated", inventoryService.updateInventoryWithLock(inventoryId, inventory));
     }
 
     @PutMapping("/machines/{machine_id}/drinks/{drink_id}/inventory")
