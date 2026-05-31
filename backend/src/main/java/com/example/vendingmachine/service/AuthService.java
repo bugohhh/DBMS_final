@@ -243,8 +243,10 @@ public class AuthService {
         jdbcTemplate.update(sql, newName, userId);
     }
 
-    // 8. 強制停用（刪除帳號）大腦：把帳號從 Account 刪掉，讓他徹底失去登入門票
+    // 8. 強制停用（刪除帳號）大腦：把帳號從 Account 刪掉，讓他徹底失去登入門票，並同步移出班組。
     public void deleteAccountOnly(int userId) {
+        jdbcTemplate.update("UPDATE `Staff` SET `team_id` = NULL WHERE `user_id` = ?", userId);
+        jdbcTemplate.update("UPDATE `LoginSession` SET `revoked_at` = NOW() WHERE `user_id` = ? AND `revoked_at` IS NULL", userId);
         String sql = "DELETE FROM `Account` WHERE `user_id` = ?";
         jdbcTemplate.update(sql, userId);
     }

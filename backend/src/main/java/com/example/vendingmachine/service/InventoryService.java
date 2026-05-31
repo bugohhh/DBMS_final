@@ -74,15 +74,21 @@ public class InventoryService {
     }
 
     public Inventory updateInventoryWithLock(Long inventoryId, Inventory updated) {
+        Inventory current = getInventoryById(inventoryId);
+        validateInventoryForUpdate(updated, current.getCapacity());
+
         Integer clientVersion = updated.getVersion();
         System.out.println("=== 版本檢查 === inventoryId=" + inventoryId + " clientVersion=" + clientVersion);
         if (clientVersion == null) {
             clientVersion = 0;
         }
+        int effectiveCapacity = updated.getCapacity() != null ? updated.getCapacity() : current.getCapacity();
         boolean success = inventoryDao.updateWithVersion(
             inventoryId,
             updated.getQuantity(),
             updated.getPrice(),
+            updated.getLowStockThreshold(),
+            effectiveCapacity,
             clientVersion
         );
         System.out.println("=== 更新結果 === success=" + success);
@@ -135,7 +141,10 @@ public class InventoryService {
     }
 
     private void validateQuantityWithinCapacity(Integer quantity, Integer capacity) {
-        if (capacity != null && capacity >= 0 && quantity != null && quantity > capacity) {
+        if (capacity != null && capacity < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "capacity must be greater than 0");
+        }
+        if (capacity != null && quantity != null && quantity > capacity) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "quantity cannot exceed capacity");
         }
     }

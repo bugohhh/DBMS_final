@@ -53,14 +53,9 @@ public class DrinkService {
         if (drinkId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "drinkId is required");
         }
-        getDrinkById(drinkId);
-        int refs = drinkDao.countReferences(drinkId);
-        if (refs > 0) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot delete drink because Inventory/SalesRecord/RefillDetail still references it");
-        }
-        if (!drinkDao.deleteById(drinkId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Drink not found");
-        }
+        Drink existing = getDrinkById(drinkId);
+        existing.setStatus("Disable");
+        drinkDao.save(existing);
     }
 
     public List<Drink> getDrinksByName(String name) {

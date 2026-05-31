@@ -90,12 +90,12 @@ async function submitDrinkManagerEdit() {
 }
 
 async function deleteDrink(drinkId) {
-    if (!confirm(`確定刪除飲料 #${drinkId}？若該飲料已被庫存、銷售或補貨紀錄引用，後端會拒絕刪除。`)) return;
+    if (!confirm(`確定刪除飲料 #${drinkId}？系統會將狀態改為 Disable，飲料管理與新增庫存清單將不再顯示。`)) return;
     try {
         const res = await apiFetch('DELETE', `/drinks/${drinkId}`);
         const data = await res.json().catch(() => ({}));
-        if (!res.ok || data.success === false) throw new Error(data.message || '資料庫外鍵限制，無法刪除');
-        showToast('✅ 飲料已刪除');
+        if (!res.ok || data.success === false) throw new Error(data.message || '刪除失敗');
+        showToast('✅ 飲料已停用');
         switchTab('drinks');
     } catch(e) { showToast('❌ 刪除失敗：' + e.message); }
 }

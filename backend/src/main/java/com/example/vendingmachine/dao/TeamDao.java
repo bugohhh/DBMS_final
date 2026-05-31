@@ -62,4 +62,21 @@ public class TeamDao {
             return team;
         }
     }
+
+    public void clearStaffAssignments(Long teamId) {
+        jdbcTemplate.update("UPDATE Staff SET team_id = NULL WHERE team_id = ?", teamId);
+    }
+
+    public void deleteRefillTasks(Long teamId) {
+        jdbcTemplate.update("""
+                DELETE rd FROM RefillDetail rd
+                JOIN RefillTask rt ON rd.refilltask_id = rt.refilltask_id
+                WHERE rt.team_id = ?
+                """, teamId);
+        jdbcTemplate.update("DELETE FROM RefillTask WHERE team_id = ?", teamId);
+    }
+
+    public boolean deleteById(Long teamId) {
+        return jdbcTemplate.update("DELETE FROM Team WHERE team_id = ?", teamId) > 0;
+    }
 }

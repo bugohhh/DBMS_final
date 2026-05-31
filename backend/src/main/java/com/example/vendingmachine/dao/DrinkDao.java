@@ -43,6 +43,7 @@ public class DrinkDao {
                        COALESCE(SUM(i.quantity), 0) AS drink_quantity
                 FROM Drink d
                 LEFT JOIN Inventory i ON d.drink_id = i.drink_id
+                WHERE d.status = 'Active'
                 GROUP BY d.drink_id, d.drink_name, d.brand, d.category, d.size, d.status
                 ORDER BY d.drink_id
                 """;
@@ -61,7 +62,7 @@ public class DrinkDao {
 
 
     public List<Drink> findActive() {
-        String sql = "SELECT drink_id, drink_name, brand, category, size, status FROM Drink WHERE status = 'Active'";
+        String sql = "SELECT drink_id, drink_name, brand, category, size, status FROM Drink WHERE status = 'Active' ORDER BY drink_name, drink_id";
         return jdbcTemplate.query(sql, drinkRowMapper);
     }
 
@@ -69,7 +70,7 @@ public class DrinkDao {
         String sql = """
                 SELECT drink_id, drink_name, brand, category, size, status
                 FROM Drink
-                WHERE LOWER(drink_name) LIKE LOWER(?)
+                WHERE status = 'Active' AND LOWER(drink_name) LIKE LOWER(?)
                 ORDER BY drink_name, drink_id
                 """;
         return jdbcTemplate.query(sql, drinkRowMapper, "%" + name + "%");

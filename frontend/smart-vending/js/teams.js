@@ -26,6 +26,8 @@ async function renderTeams(area) {
         }
     }
 
+    window._teamRows = teams;
+
     area.innerHTML = `
         <div class="page-header">
             <h2>團隊管理</h2>
@@ -66,6 +68,7 @@ async function renderTeams(area) {
                     </div>
                     <div style="display:flex;gap:8px;">
                         <button class="btn btn-ghost btn-sm" onclick="openAddStaffToTeam(${team.teamId})">+ 新增成員</button>
+                        <button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="deleteTeam(${team.teamId})">刪除班組</button>
                     </div>
                 </div>
             `).join('')}
@@ -138,6 +141,26 @@ async function submitAddStaff() {
         switchTab('teams');
     } catch (e) {
         showToast('❌ 找不到 User ID: ' + staffId + '，請確認是否存在');
+    }
+}
+
+async function deleteTeam(teamId) {
+    const team = (window._teamRows || []).find(t => String(t.teamId) === String(teamId));
+    const teamName = team?.teamName || '';
+    const staffCount = team?.staff?.length || 0;
+    const warning = `確定要刪除第 ${teamId} 組${teamName ? '（' + teamName + '）' : ''}？\n\n後果：\n- 此班組會被永久刪除\n- 此班組的補貨任務與補貨明細會一起刪除\n- ${staffCount} 名成員會被移出此班組（帳號不會刪除）`;
+    if (!confirm(warning)) return;
+    try {
+        const res = await apiFetch('DELETE', `/teams/${teamId}`);
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || 'API 返回錯誤: ' + res.status);
+        }
+        teamsCache = null;
+        showToast('✅ 班組已刪除，相關補貨任務已同步刪除');
+        switchTab('teams');
+    } catch (e) {
+        showToast('❌ 刪除失敗：' + e.message);
     }
 }
 

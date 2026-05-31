@@ -57,6 +57,16 @@ public class RegionTeamController {
         return ResponseEntity.ok(baseDataService.createTeam(team));
     }
 
+    @DeleteMapping("/teams/{team_id}")
+    public ResponseEntity<?> deleteTeam(@PathVariable("team_id") Long teamId) {
+        try {
+            baseDataService.deleteTeam(teamId);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/teams/{team_id}/staff")
     public ResponseEntity<StaffTeam> addStaffToTeam(@PathVariable("team_id") Long teamId, @RequestBody Map<String, Long> payload) {
         Long staffId = payload.get("staffId");

@@ -10,6 +10,7 @@ import com.example.vendingmachine.model.StaffTeam;
 import com.example.vendingmachine.model.VendingMachine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
@@ -78,6 +79,16 @@ public class BaseDataService {
     
     public Team createTeam(Team team) { 
         return teamDao.save(team); 
+    }
+
+    @Transactional
+    public void deleteTeam(Long teamId) {
+        Team team = teamDao.findById(teamId).orElseThrow(() -> new RuntimeException("找不到該班組"));
+        teamDao.deleteRefillTasks(teamId);
+        teamDao.clearStaffAssignments(teamId);
+        if (!teamDao.deleteById(teamId)) {
+            throw new RuntimeException("刪除班組失敗: " + team.getTeamName());
+        }
     }
 
     public StaffTeam addStaffToTeam(Long teamId, Long staffId) {

@@ -167,9 +167,13 @@ public class InventoryDao {
     }
 
     //版本檢查
-    public boolean updateWithVersion(Long inventoryId, int quantity, BigDecimal price, int currentVersion) {
-        String sql = "UPDATE Inventory SET quantity = ?, price = ?, version = version + 1 WHERE inventory_id = ? AND version = ?";
-        int rows = jdbcTemplate.update(sql, quantity, price, inventoryId, currentVersion);
+    public boolean updateWithVersion(Long inventoryId, int quantity, BigDecimal price, Integer threshold, int capacity, int currentVersion) {
+        String sql = """
+                UPDATE Inventory
+                SET quantity = ?, price = ?, threshold = COALESCE(?, threshold), capacity = ?, version = version + 1
+                WHERE inventory_id = ? AND version = ?
+                """;
+        int rows = jdbcTemplate.update(sql, quantity, price, threshold, capacity, inventoryId, currentVersion);
         return rows > 0; // false 代表版本衝突
     }
 
