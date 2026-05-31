@@ -68,9 +68,13 @@ public class RegionTeamController {
     }
 
     @PostMapping("/teams/{team_id}/staff")
-    public ResponseEntity<StaffTeam> addStaffToTeam(@PathVariable("team_id") Long teamId, @RequestBody Map<String, Long> payload) {
-        Long staffId = payload.get("staffId");
-        return ResponseEntity.ok(baseDataService.addStaffToTeam(teamId, staffId));
+    public ResponseEntity<?> addStaffToTeam(@PathVariable("team_id") Long teamId, @RequestBody Map<String, Long> payload) {
+        try {
+            Long staffId = payload.get("staffId");
+            return ResponseEntity.ok(baseDataService.addStaffToTeam(teamId, staffId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        }
     }
 
     @GetMapping("/teams/{team_id}/staff")

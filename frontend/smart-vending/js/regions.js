@@ -75,11 +75,28 @@ async function renderRegions(area) {
     }
 }
 
-function openAddRegionModal() {
+async function loadManagerOptions(selectId, selectedId = '') {
+    const select = document.getElementById(selectId);
+    select.innerHTML = '<option value="">載入 Manager 帳號中...</option>';
+    try {
+        const res = await apiFetch('GET', '/auth/users');
+        const data = await res.json();
+        const managers = (data.data || []).filter(u => u.user_type === 'Manager');
+        select.innerHTML = '<option value="">-- 選擇有效 Manager 帳號 --</option>' +
+            managers.map(u => `<option value="${u.user_id}" ${String(u.user_id) === String(selectedId) ? 'selected' : ''}>#${u.user_id} ${escapeHtml(u.user_name || '')}${u.account ? '（' + escapeHtml(u.account) + '）' : ''}</option>`).join('');
+        if (managers.length === 0) {
+            select.innerHTML = '<option value="">沒有可用的 Manager 帳號</option>';
+        }
+    } catch (e) {
+        select.innerHTML = '<option value="">Manager 帳號載入失敗</option>';
+    }
+}
+
+async function openAddRegionModal() {
     document.getElementById('new-region-name').value = '';
-    document.getElementById('new-region-manager-id').value = '';
     document.getElementById('new-region-description').value = '';
     openModal('modal-add-region');
+    await loadManagerOptions('new-region-manager-id');
 }
 
 async function submitAddRegion() {
@@ -87,7 +104,7 @@ async function submitAddRegion() {
     const managerIdRaw = document.getElementById('new-region-manager-id').value.trim();
     const description = document.getElementById('new-region-description').value.trim();
     if (!name) { showToast('❌ 請填寫地區名稱'); return; }
-    if (!managerIdRaw) { showToast('❌ 請填寫負責 Manager User ID'); return; }
+    if (!managerIdRaw) { showToast('❌ 請選擇有效 Manager 帳號'); return; }
     try {
         const res = await apiFetch('POST', '/regions', { regionName: name, managerId: Number(managerIdRaw), description });
         if (!res.ok) {
@@ -108,13 +125,13 @@ function openEditRegionModalById(regionId) {
     openEditRegionModal(region);
 }
 
-function openEditRegionModal(region) {
+async function openEditRegionModal(region) {
     window._editRegionId = region.id;
     document.getElementById('edit-region-id').textContent = '#' + region.id;
     document.getElementById('edit-region-name').value = region.name || '';
-    document.getElementById('edit-region-manager-id').value = region.managerId || '';
     document.getElementById('edit-region-description').value = region.description || '';
     openModal('modal-edit-region');
+    await loadManagerOptions('edit-region-manager-id', region.managerId || '');
 }
 
 async function submitEditRegion() {
@@ -124,7 +141,7 @@ async function submitEditRegion() {
     const description = document.getElementById('edit-region-description').value.trim();
     if (!id) { showToast('❌ 找不到地區 ID'); return; }
     if (!name) { showToast('❌ 請填寫地區名稱'); return; }
-    if (!managerIdRaw) { showToast('❌ 請填寫負責 Manager User ID'); return; }
+    if (!managerIdRaw) { showToast('❌ 請選擇有效 Manager 帳號'); return; }
     try {
         const res = await apiFetch('PUT', `/regions/${id}`, { regionName: name, managerId: Number(managerIdRaw), description });
         if (!res.ok) {

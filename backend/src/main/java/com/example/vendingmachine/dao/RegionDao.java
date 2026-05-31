@@ -60,7 +60,12 @@ public class RegionDao {
     public boolean isManagerUser(Long userId) {
         if (userId == null) return false;
         Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM `User` WHERE user_id = ? AND user_type = 'Manager'",
+                """
+                SELECT COUNT(*)
+                FROM `User` u
+                JOIN `Account` a ON u.user_id = a.user_id
+                WHERE u.user_id = ? AND u.user_type = 'Manager'
+                """,
                 Integer.class,
                 userId
         );

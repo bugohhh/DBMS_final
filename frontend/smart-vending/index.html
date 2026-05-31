@@ -346,8 +346,8 @@
             <input type="text" id="new-region-name" placeholder="例：中正區" />
         </div>
         <div class="form-group">
-            <label>負責 Manager User ID</label>
-            <input type="number" id="new-region-manager-id" placeholder="例：1" />
+            <label>負責 Manager</label>
+            <select id="new-region-manager-id"><option value="">請先載入 Manager...</option></select>
         </div>
         <div class="form-group">
             <label>描述（選填）</label>
@@ -369,8 +369,8 @@
             <input type="text" id="edit-region-name" />
         </div>
         <div class="form-group">
-            <label>負責 Manager User ID</label>
-            <input type="number" id="edit-region-manager-id" />
+            <label>負責 Manager</label>
+            <select id="edit-region-manager-id"><option value="">請先載入 Manager...</option></select>
         </div>
         <div class="form-group">
             <label>描述（選填）</label>
@@ -410,8 +410,8 @@
         <h3>➕ 新增成員</h3>
         <div style="color:var(--muted);font-size:13px;margin-bottom:16px;" id="add-staff-team-label"></div>
         <div class="form-group">
-            <label>Staff User ID</label>
-            <input type="number" id="add-staff-id" placeholder="例：3" />
+            <label>Staff 帳號</label>
+            <select id="add-staff-id"><option value="">請先載入 Staff...</option></select>
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" onclick="closeModal('modal-add-staff')">取消</button>

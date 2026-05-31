@@ -110,25 +110,42 @@ async function submitAddTeam() {
 }
 
 // 新增成員到班組
-function openAddStaffToTeam(teamId) {
+async function openAddStaffToTeam(teamId) {
     window._addStaffTeamId = teamId;
     document.getElementById('add-staff-team-label').textContent = '第 ' + teamId + ' 組';
-    document.getElementById('add-staff-id').value = '';
+    const select = document.getElementById('add-staff-id');
+    select.innerHTML = '<option value="">載入 Staff 帳號中...</option>';
     openModal('modal-add-staff');
+
+    try {
+        const res = await apiFetch('GET', '/auth/users');
+        const data = await res.json();
+        const users = (data.data || []).filter(u => u.user_type === 'Staff');
+        const currentTeam = (window._teamRows || []).find(t => String(t.teamId) === String(teamId));
+        const currentStaffIds = new Set((currentTeam?.staff || []).map(s => String(s.staffId || s.staff_id)));
+        const available = users.filter(u => !currentStaffIds.has(String(u.user_id)));
+        select.innerHTML = '<option value="">-- 選擇有效 Staff 帳號 --</option>' +
+            available.map(u => `<option value="${u.user_id}">#${u.user_id} ${escapeHtml(u.user_name || '')}${u.account ? '（' + escapeHtml(u.account) + '）' : ''}</option>`).join('');
+        if (available.length === 0) {
+            select.innerHTML = '<option value="">沒有可加入的有效 Staff 帳號</option>';
+        }
+    } catch (e) {
+        select.innerHTML = '<option value="">Staff 帳號載入失敗</option>';
+    }
 }
 
 async function submitAddStaff() {
     const staffId = parseInt(document.getElementById('add-staff-id').value);
     const teamId = window._addStaffTeamId;
-    if (!staffId) { showToast('❌ 請填寫 Staff User ID'); return; }
+    if (!staffId) { showToast('❌ 請選擇有效 Staff 帳號'); return; }
 
     try {
         const res = await apiFetch('POST', `/teams/${teamId}/staff`, { staffId: staffId });
         if (!res.ok) {
             const errData = await res.json().catch(() => null);
             const msg = errData?.message || '新增失敗';
-            if (msg.includes('找不到') || res.status === 404) {
-                showToast('❌ 找不到該 Staff ID，請確認是否正確');
+            if (msg.includes('找不到') || res.status === 404 || res.status === 400) {
+                showToast('❌ ' + msg);
             } else if (msg.includes('Duplicate') || res.status === 409) {
                 showToast('❌ 該成員已在此班組中');
             } else {

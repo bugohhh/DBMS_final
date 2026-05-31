@@ -27,11 +27,16 @@ public class StaffTeamDao {
     };
 
     public StaffTeam save(StaffTeam staffTeam) {
-        // 檢查 user 是否存在
-        String checkUserSql = "SELECT COUNT(*) FROM `User` WHERE user_id = ?";
+        // 檢查 user 是否存在、是否為 Staff，且 Account 尚未被刪除/停用
+        String checkUserSql = """
+                SELECT COUNT(*)
+                FROM `User` u
+                JOIN `Account` a ON u.user_id = a.user_id
+                WHERE u.user_id = ? AND u.user_type = 'Staff'
+                """;
         int userCount = jdbcTemplate.queryForObject(checkUserSql, Integer.class, staffTeam.getStaffId());
         if (userCount == 0) {
-            throw new RuntimeException("找不到 User ID: " + staffTeam.getStaffId());
+            throw new RuntimeException("找不到有效 Staff 帳號 User ID: " + staffTeam.getStaffId());
         }
 
         // 檢查是否已在 Staff 表

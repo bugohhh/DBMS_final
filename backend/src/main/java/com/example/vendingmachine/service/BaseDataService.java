@@ -68,7 +68,7 @@ public class BaseDataService {
             throw new RuntimeException("請填寫負責 Manager User ID");
         }
         if (!regionDao.isManagerUser(region.getManagerId())) {
-            throw new RuntimeException("負責人 User ID 必須存在，且 user_type 必須是 Manager");
+            throw new RuntimeException("負責人 User ID 必須存在於 Account，且 user_type 必須是 Manager");
         }
     }
 
