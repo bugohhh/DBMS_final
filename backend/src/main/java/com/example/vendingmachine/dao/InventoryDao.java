@@ -205,9 +205,7 @@ public class InventoryDao {
 
     public Optional<Inventory> findByMachineIdAndDrinkId(Long machineId, Long drinkId) {
         String sql = """
-                SELECT inventory_id, machine_id, drink_id, quantity, price, threshold, capacity
-                FROM Inventory
-                WHERE machine_id = ? AND drink_id = ?
+                SELECT * FROM Inventory WHERE machine_id = ? AND drink_id = ?
                 """;
         List<Inventory> result = jdbcTemplate.query(sql, inventoryMapper, machineId, drinkId);
         return result.stream().findFirst();
