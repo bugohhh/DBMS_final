@@ -35,7 +35,7 @@
             <p class="error-msg" id="login-err">帳號或密碼錯誤，請重試</p>
             <button class="btn-login" onclick="doLogin()">登入系統</button>
             <div id="register-link" style="text-align:center;margin-top:12px;display:none">
-                 <button onclick="toggleRegister(true)" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-family:inherit;font-size:13px;">還沒有帳號？點此註冊</button>
+                 
             </div>
         </div>
         <div id="register-form" style="display:none">
@@ -84,9 +84,6 @@
             </button>
             <button class="nav-item" id="nav-teams" onclick="switchTab('teams')">
                 <i class="fas fa-users"></i> 團隊管理
-            </button>
-            <button class="nav-item" id="nav-regions" onclick="switchTab('regions')">
-                <i class="fas fa-map-marker-alt"></i> 地區管理
             </button>
             <button class="nav-item" id="nav-users" onclick="switchTab('users')">
                 <i class="fas fa-user-shield"></i> 帳號管理
@@ -343,32 +340,9 @@
             <label>地區名稱</label>
             <input type="text" id="new-region-name" placeholder="例：中正區" />
         </div>
-        <div class="form-group">
-            <label>負責 Manager User ID</label>
-            <input type="number" id="new-region-manager-id" placeholder="例：2" />
-        </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" onclick="closeModal('modal-add-region')">取消</button>
             <button class="btn btn-primary" onclick="submitAddRegion()">新增</button>
-        </div>
-    </div>
-</div>
-
-<!-- ═══════════════ MODAL: 編輯地區 ═══════════════ -->
-<div class="modal-backdrop" id="modal-edit-region">
-    <div class="modal">
-        <h3>✏️ 編輯地區 <span id="edit-region-id" style="color:var(--muted);font-size:14px"></span></h3>
-        <div class="form-group">
-            <label>地區名稱</label>
-            <input type="text" id="edit-region-name" />
-        </div>
-        <div class="form-group">
-            <label>負責 Manager User ID</label>
-            <input type="number" id="edit-region-manager-id" placeholder="例：2" />
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-ghost" onclick="closeModal('modal-edit-region')">取消</button>
-            <button class="btn btn-primary" onclick="submitEditRegion()">儲存</button>
         </div>
     </div>
 </div>
@@ -423,7 +397,6 @@
 <script src="js/drinks.js"></script>
 <script src="js/app.js"></script>
 <script src="js/teams.js"></script>
-<script src="js/regions.js"></script>
 
 </body>
 </html>
