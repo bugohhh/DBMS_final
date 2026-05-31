@@ -161,6 +161,42 @@ async function renderUsers(area, keyword = '') {
     }
 }
 
+/**
+ * 6. 管理者直接幫指定員工重設密碼 (PUT /api/auth/users/{user_id}/password)
+ */
+async function resetStaffPassword(userId, userName) {
+    // 1. 用瀏覽器內建的 prompt 彈窗，直接讓管理員輸入新密碼
+    const newPassword = prompt(`🔑 請輸入要幫 [${userName}] 設定的新密碼：`);
+    
+    // 如果點取消或是沒輸入，就直接取消動作
+    if (newPassword === null) return; 
+    if (newPassword.trim() === '') {
+        showToast('❌ 密碼不可為空！');
+        return;
+    }
+
+    // 2. 呼叫真實 API 模式送往後端
+    try {
+        // 對應後端控制器的 @PutMapping("/users/{userId}/password")
+        const res = await apiFetch('PUT', `/auth/users/${userId}/password`, {
+            new_password: newPassword.trim()
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast(`✅ 已成功將 ${userName} 的密碼重設！`);
+            // 重新刷新當前帳號管理頁面
+            renderUsers(document.getElementById('main-content'), document.getElementById('user-search')?.value || '');
+        } else {
+            showToast('❌ 重設失敗：' + data.message);
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('❌ 無法連線至伺服器重設密碼');
+    }
+}
+
 async function openCreateStaffModal() {
     const select = document.getElementById('create-staff-team');
     select.innerHTML = '<option value="">不分配班組</option>';
