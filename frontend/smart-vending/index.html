@@ -410,8 +410,12 @@
         <h3>➕ 新增成員</h3>
         <div style="color:var(--muted);font-size:13px;margin-bottom:16px;" id="add-staff-team-label"></div>
         <div class="form-group">
-            <label>Staff 帳號</label>
-            <select id="add-staff-id"><option value="">請先載入 Staff...</option></select>
+            <label>搜尋有效帳號</label>
+            <input type="text" id="add-staff-search" placeholder="🔍 搜尋 User ID、姓名、帳號或角色..." oninput="filterAddStaffCandidates()" />
+            <input type="hidden" id="add-staff-id" />
+        </div>
+        <div id="add-staff-candidates" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;margin-top:12px;">
+            <div style="color:var(--muted);font-size:13px;">請先載入帳號...</div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-ghost" onclick="closeModal('modal-add-staff')">取消</button>

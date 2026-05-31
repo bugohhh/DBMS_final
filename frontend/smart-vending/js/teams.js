@@ -112,32 +112,82 @@ async function submitAddTeam() {
 // 新增成員到班組
 async function openAddStaffToTeam(teamId) {
     window._addStaffTeamId = teamId;
+    window._addStaffCandidates = [];
+    window._selectedAddStaffId = null;
     document.getElementById('add-staff-team-label').textContent = '第 ' + teamId + ' 組';
-    const select = document.getElementById('add-staff-id');
-    select.innerHTML = '<option value="">載入 Staff 帳號中...</option>';
+    document.getElementById('add-staff-search').value = '';
+    document.getElementById('add-staff-id').value = '';
+    const list = document.getElementById('add-staff-candidates');
+    list.innerHTML = '<div style="color:var(--muted);font-size:13px;">載入有效帳號中...</div>';
     openModal('modal-add-staff');
 
     try {
         const res = await apiFetch('GET', '/auth/users');
         const data = await res.json();
-        const users = (data.data || []).filter(u => u.user_type === 'Staff');
+        const users = data.data || [];
         const currentTeam = (window._teamRows || []).find(t => String(t.teamId) === String(teamId));
         const currentStaffIds = new Set((currentTeam?.staff || []).map(s => String(s.staffId || s.staff_id)));
-        const available = users.filter(u => !currentStaffIds.has(String(u.user_id)));
-        select.innerHTML = '<option value="">-- 選擇有效 Staff 帳號 --</option>' +
-            available.map(u => `<option value="${u.user_id}">#${u.user_id} ${escapeHtml(u.user_name || '')}${u.account ? '（' + escapeHtml(u.account) + '）' : ''}</option>`).join('');
-        if (available.length === 0) {
-            select.innerHTML = '<option value="">沒有可加入的有效 Staff 帳號</option>';
-        }
+        window._addStaffCandidates = users.filter(u => u.account && !currentStaffIds.has(String(u.user_id)));
+        renderAddStaffCandidates(window._addStaffCandidates);
     } catch (e) {
-        select.innerHTML = '<option value="">Staff 帳號載入失敗</option>';
+        list.innerHTML = '<div style="color:var(--danger);font-size:13px;">帳號載入失敗</div>';
     }
+}
+
+function renderAddStaffCandidates(candidates) {
+    const list = document.getElementById('add-staff-candidates');
+    if (!list) return;
+    if (!candidates.length) {
+        list.innerHTML = '<div style="color:var(--muted);font-size:13px;">沒有可加入的有效帳號（已排除重複加入與已刪除 Account 的 user）</div>';
+        return;
+    }
+    list.innerHTML = candidates.map(u => {
+        const roleClass = u.user_type === 'Manager' ? 'badge-ok' : 'badge-warn';
+        return `
+            <button type="button" class="btn btn-ghost add-staff-candidate" data-user-id="${u.user_id}"
+                onclick="selectAddStaffCandidate(${u.user_id})"
+                style="display:flex;justify-content:space-between;align-items:center;text-align:left;padding:10px 12px;gap:12px;">
+                <span>
+                    <span style="font-weight:700;">#${u.user_id} ${escapeHtml(u.user_name || '')}</span>
+                    <span style="display:block;color:var(--muted);font-size:12px;margin-top:2px;">${escapeHtml(u.account || '')}${u.team_name ? '｜目前：' + escapeHtml(u.team_name) : ''}</span>
+                </span>
+                <span class="badge ${roleClass}">${escapeHtml(u.user_type || 'User')}</span>
+            </button>
+        `;
+    }).join('');
+}
+
+function filterAddStaffCandidates() {
+    const keyword = document.getElementById('add-staff-search')?.value.toLowerCase().trim() || '';
+    const candidates = window._addStaffCandidates || [];
+    if (!keyword) {
+        renderAddStaffCandidates(candidates);
+        return;
+    }
+    renderAddStaffCandidates(candidates.filter(u => [
+        u.user_id,
+        u.user_name,
+        u.account,
+        u.user_type,
+        u.team_name,
+        u.region_name
+    ].some(v => String(v || '').toLowerCase().includes(keyword))));
+}
+
+function selectAddStaffCandidate(userId) {
+    window._selectedAddStaffId = userId;
+    document.getElementById('add-staff-id').value = userId;
+    document.querySelectorAll('.add-staff-candidate').forEach(btn => {
+        const selected = btn.dataset.userId === String(userId);
+        btn.style.borderColor = selected ? 'var(--accent)' : 'var(--border)';
+        btn.style.background = selected ? 'rgba(79,124,255,.15)' : 'var(--surface2)';
+    });
 }
 
 async function submitAddStaff() {
     const staffId = parseInt(document.getElementById('add-staff-id').value);
     const teamId = window._addStaffTeamId;
-    if (!staffId) { showToast('❌ 請選擇有效 Staff 帳號'); return; }
+    if (!staffId) { showToast('❌ 請先搜尋並選擇有效帳號'); return; }
 
     try {
         const res = await apiFetch('POST', `/teams/${teamId}/staff`, { staffId: staffId });
