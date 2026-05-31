@@ -1,10 +1,10 @@
 -- -------------------------------------------------------------
--- TablePlus 7.0.6(706)
+-- TablePlus 7.1.0(710)
 --
 -- https://tableplus.com/
 --
 -- Database: dbms-example
--- Generation Time: 2026-05-27 20:10:25.3290
+-- Generation Time: 2026-05-31 15:32:09.9410
 -- -------------------------------------------------------------
 
 
@@ -39,7 +39,7 @@ CREATE TABLE `Drink` (
   `size` varchar(50) DEFAULT NULL,
   `status` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`drink_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 DROP TABLE IF EXISTS `Inventory`;
 CREATE TABLE `Inventory` (
@@ -53,12 +53,11 @@ CREATE TABLE `Inventory` (
   `last_restock` datetime DEFAULT NULL,
   `update_source` enum('Auto','Manual') DEFAULT NULL,
   PRIMARY KEY (`inventory_id`),
-  UNIQUE KEY `uq_inventory_machine_drink` (`machine_id`,`drink_id`),
   KEY `machine_id` (`machine_id`),
   KEY `drink_id` (`drink_id`),
   CONSTRAINT `inventory_ibfk_1` FOREIGN KEY (`machine_id`) REFERENCES `VendingMachine` (`machine_id`),
   CONSTRAINT `inventory_ibfk_2` FOREIGN KEY (`drink_id`) REFERENCES `Drink` (`drink_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=62 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=87 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 DROP TABLE IF EXISTS `LoginSession`;
 CREATE TABLE `LoginSession` (
@@ -73,12 +72,15 @@ CREATE TABLE `LoginSession` (
   PRIMARY KEY (`session_id`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `loginsession_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `User` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=165 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=226 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 DROP TABLE IF EXISTS `Manager`;
 CREATE TABLE `Manager` (
+  `manager_id` int NOT NULL AUTO_INCREMENT,
   `user_id` int NOT NULL,
-  PRIMARY KEY (`user_id`),
+  PRIMARY KEY (`manager_id`),
+  UNIQUE KEY `user_id` (`user_id`),
+  UNIQUE KEY `user_id_2` (`user_id`),
   CONSTRAINT `manager_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `User` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -115,7 +117,7 @@ CREATE TABLE `RefillTask` (
   KEY `region_id` (`region_id`),
   CONSTRAINT `refilltask_ibfk_1` FOREIGN KEY (`team_id`) REFERENCES `Team` (`team_id`),
   CONSTRAINT `refilltask_ibfk_2` FOREIGN KEY (`region_id`) REFERENCES `Region` (`region_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 DROP TABLE IF EXISTS `Region`;
 CREATE TABLE `Region` (
@@ -134,7 +136,6 @@ CREATE TABLE `SalesRecord` (
   `machine_id` int NOT NULL,
   `drink_id` int NOT NULL,
   `quantity` int NOT NULL,
-  `price` decimal(10,2) DEFAULT 0,
   `sale_time` datetime DEFAULT NULL,
   `record_source` enum('Auto','Manual') DEFAULT NULL,
   PRIMARY KEY (`sales_id`),
@@ -142,7 +143,7 @@ CREATE TABLE `SalesRecord` (
   KEY `drink_id` (`drink_id`),
   CONSTRAINT `salesrecord_ibfk_1` FOREIGN KEY (`machine_id`) REFERENCES `VendingMachine` (`machine_id`),
   CONSTRAINT `salesrecord_ibfk_2` FOREIGN KEY (`drink_id`) REFERENCES `Drink` (`drink_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 DROP TABLE IF EXISTS `Staff`;
 CREATE TABLE `Staff` (
@@ -186,7 +187,7 @@ CREATE TABLE `VendingMachine` (
   PRIMARY KEY (`machine_id`),
   KEY `region_id` (`region_id`),
   CONSTRAINT `vendingmachine_ibfk_1` FOREIGN KEY (`region_id`) REFERENCES `Region` (`region_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 INSERT INTO `Account` (`user_id`, `account`, `password_hash`, `user_name`, `user_type`) VALUES
 (2, 'manager01', 'admin123', '王小明', 'Manager'),
@@ -195,14 +196,15 @@ INSERT INTO `Account` (`user_id`, `account`, `password_hash`, `user_name`, `user
 
 INSERT INTO `Drink` (`drink_id`, `drink_name`, `brand`, `category`, `size`, `status`) VALUES
 (1, '可口可樂 330ml', '可口可樂', '碳酸飲料', '330ml', 'Active'),
-(2, '礦泉水 500ml', '悅氏', '水', '500ml', 'Active'),
-(3, '伯朗咖啡 350ml', '伯朗', '咖啡', '350ml', 'Active'),
-(4, '麥香奶茶 250ml', '統一', '茶飲', '250ml', 'Active');
+(2, '原萃綠茶 500ml', '原萃', '茶飲料', '500ml', 'Active'),
+(3, '美粒果柳橙 350ml', '美粒果', '果汁', '350ml', 'Active'),
+(4, '雀巢咖啡 250ml', '雀巢', '咖啡', '250ml', 'Active'),
+(5, '可爾必思', '可爾必思', '', NULL, 'Active');
 
 INSERT INTO `Inventory` (`inventory_id`, `machine_id`, `drink_id`, `quantity`, `price`, `threshold`, `capacity`, `last_restock`, `update_source`) VALUES
-(31, 3, 1, 18, 30.00, 5, 30, NULL, NULL),
-(32, 3, 2, 2, 25.00, 5, 30, NULL, NULL),
-(33, 3, 3, 0, 35.00, 5, 30, NULL, NULL),
+(31, 3, 1, 17, NULL, NULL, NULL, '2026-05-29 17:23:49', 'Auto'),
+(32, 3, 2, 2, NULL, NULL, NULL, '2026-05-29 17:23:49', 'Manual'),
+(33, 3, 3, 0, NULL, NULL, NULL, '2026-05-29 17:23:49', 'Manual'),
 (34, 4, 1, 5, 30.00, 5, 30, NULL, NULL),
 (35, 4, 2, 12, 25.00, 5, 30, NULL, NULL),
 (36, 4, 3, 8, 35.00, 5, 30, NULL, NULL),
@@ -228,9 +230,30 @@ INSERT INTO `Inventory` (`inventory_id`, `machine_id`, `drink_id`, `quantity`, `
 (59, 17, 2, 3, 30.00, 5, 30, '2026-05-27 17:52:27', 'Manual'),
 (60, 17, 3, 3, 30.00, 5, 30, '2026-05-27 17:52:27', 'Manual'),
 (61, 17, 4, 3, 30.00, 5, 30, '2026-05-27 17:52:27', 'Manual'),
-(62, 18, 1, 12, 30.00, 5, 30, NOW(), 'Manual'),
-(63, 18, 2, 8, 25.00, 5, 30, NOW(), 'Manual'),
-(64, 18, 4, 6, 35.00, 5, 30, NOW(), 'Manual');
+(62, 18, 1, 0, 30.00, 5, 30, '2026-05-28 15:21:24', 'Manual'),
+(63, 18, 2, 0, 30.00, 5, 30, '2026-05-28 15:21:24', 'Manual'),
+(64, 18, 3, 0, 30.00, 5, 30, '2026-05-28 15:21:24', 'Manual'),
+(65, 18, 4, 0, 30.00, 5, 30, '2026-05-28 15:21:24', 'Manual'),
+(66, 19, 1, 0, 30.00, 5, 30, '2026-05-28 15:42:15', 'Manual'),
+(67, 19, 2, 0, 30.00, 5, 30, '2026-05-28 15:42:15', 'Manual'),
+(68, 19, 3, 0, 30.00, 5, 30, '2026-05-28 15:42:15', 'Manual'),
+(69, 19, 4, 0, 30.00, 5, 30, '2026-05-28 15:42:15', 'Manual'),
+(71, 3, 4, 0, NULL, NULL, NULL, '2026-05-29 17:23:49', 'Manual'),
+(72, 20, 1, 0, 30.00, 5, 30, '2026-05-29 23:43:49', 'Manual'),
+(73, 20, 2, 0, 30.00, 5, 30, '2026-05-29 23:43:49', 'Manual'),
+(74, 20, 3, 0, 30.00, 5, 30, '2026-05-29 23:43:49', 'Manual'),
+(75, 20, 4, 0, 30.00, 5, 30, '2026-05-29 23:43:49', 'Manual'),
+(76, 20, 5, 0, 30.00, 5, 30, '2026-05-29 23:43:49', 'Manual'),
+(77, 21, 1, 0, 30.00, 5, 30, '2026-05-29 23:44:23', 'Manual'),
+(78, 21, 2, 0, 30.00, 5, 30, '2026-05-29 23:44:23', 'Manual'),
+(79, 21, 3, 0, 30.00, 5, 30, '2026-05-29 23:44:23', 'Manual'),
+(80, 21, 4, 0, 30.00, 5, 30, '2026-05-29 23:44:23', 'Manual'),
+(81, 21, 5, 0, 30.00, 5, 30, '2026-05-29 23:44:23', 'Manual'),
+(82, 22, 1, 0, 30.00, 5, 30, '2026-05-29 23:50:13', 'Manual'),
+(83, 22, 2, 0, 30.00, 5, 30, '2026-05-29 23:50:13', 'Manual'),
+(84, 22, 3, 0, 30.00, 5, 30, '2026-05-29 23:50:13', 'Manual'),
+(85, 22, 4, 0, 30.00, 5, 30, '2026-05-29 23:50:13', 'Manual'),
+(86, 22, 5, 0, 30.00, 5, 30, '2026-05-29 23:50:13', 'Manual');
 
 INSERT INTO `LoginSession` (`session_id`, `user_id`, `refresh_token_hash`, `issued_at`, `expires_at`, `revoked_at`, `ip_address`, `user_agent`) VALUES
 (1, 2, 'e2008528-0446-47a7-a2f5-95b74aae08ac', '2026-05-21 17:31:33', '2026-05-21 19:31:33', NULL, NULL, NULL),
@@ -396,7 +419,68 @@ INSERT INTO `LoginSession` (`session_id`, `user_id`, `refresh_token_hash`, `issu
 (161, 2, '1cd3c4f2-bafa-47a8-8636-bc3c08eb25de', '2026-05-27 18:18:45', '2026-05-27 20:18:45', NULL, NULL, NULL),
 (162, 4, '88777b4a-7b14-4184-85ce-4e3b8e456d71', '2026-05-27 18:19:05', '2026-05-27 20:19:05', NULL, NULL, NULL),
 (163, 2, 'a09c2282-a18e-4768-8123-64f4e07d871e', '2026-05-27 18:29:41', '2026-05-27 20:29:41', NULL, NULL, NULL),
-(164, 4, 'a2179bde-40d0-437a-b989-9b5635e72aa5', '2026-05-27 18:29:56', '2026-05-27 20:29:56', NULL, NULL, NULL);
+(164, 4, 'a2179bde-40d0-437a-b989-9b5635e72aa5', '2026-05-27 18:29:56', '2026-05-27 20:29:56', NULL, NULL, NULL),
+(165, 2, '318e4df4-e6b2-49cc-a46d-92ee0eb1781b', '2026-05-27 21:03:31', '2026-05-27 23:03:31', NULL, NULL, NULL),
+(166, 4, '30efb816-4aa7-4fb8-bf32-54835b274b6c', '2026-05-28 13:54:59', '2026-05-28 15:54:59', '2026-05-28 13:55:37', NULL, NULL),
+(167, 2, 'f13aacba-0440-4cb7-b618-e8d217d43120', '2026-05-28 14:15:35', '2026-05-28 16:15:35', NULL, NULL, NULL),
+(168, 2, 'dafa4b8a-1f69-4a5d-b529-e183ebb6fef8', '2026-05-28 14:20:55', '2026-05-28 16:20:55', NULL, NULL, NULL),
+(169, 2, 'd74d2091-d475-4183-970e-88c5e1d00813', '2026-05-28 14:23:54', '2026-05-28 16:23:54', NULL, NULL, NULL),
+(170, 2, '41b31ede-6a63-414d-97f9-1fb4c9020361', '2026-05-28 14:28:04', '2026-05-28 16:28:04', NULL, NULL, NULL),
+(171, 2, '0273017a-9b08-43b5-bfbc-068b8c9d708f', '2026-05-28 15:20:33', '2026-05-28 17:20:33', '2026-05-28 15:22:03', NULL, NULL),
+(172, 4, '36864dbc-3576-4794-80f8-a12a322dbb08', '2026-05-28 15:22:07', '2026-05-28 17:22:07', NULL, NULL, NULL),
+(173, 2, 'b7d903ef-acde-4589-b53f-633245bb1c68', '2026-05-28 15:23:03', '2026-05-28 17:23:03', '2026-05-28 15:29:11', NULL, NULL),
+(174, 4, '3eb8279f-b65a-4ffe-8721-eec16f5c5977', '2026-05-28 15:29:15', '2026-05-28 17:29:15', '2026-05-28 15:30:46', NULL, NULL),
+(175, 2, '81b19c19-1162-4697-941d-b0e82a654863', '2026-05-28 15:30:50', '2026-05-28 17:30:50', NULL, NULL, NULL),
+(176, 2, 'd23743af-883d-46e8-ac3f-1c0f28f2e0d4', '2026-05-28 15:36:47', '2026-05-28 17:36:47', NULL, NULL, NULL),
+(177, 2, '983c51f7-cd74-4e15-b179-a96c04ad736a', '2026-05-28 15:39:28', '2026-05-28 17:39:28', NULL, NULL, NULL),
+(178, 2, '6882bdec-9c3a-4fb8-bad2-6a6cc9970d49', '2026-05-28 15:41:39', '2026-05-28 17:41:39', NULL, NULL, NULL),
+(179, 2, 'ef02a6f1-f1ee-4c8b-817c-29401e0b3c66', '2026-05-28 15:44:39', '2026-05-28 17:44:39', NULL, NULL, NULL),
+(180, 2, '799167be-0860-403c-b92b-80744ba0fd7c', '2026-05-28 15:47:39', '2026-05-28 17:47:39', NULL, NULL, NULL),
+(181, 2, '3aa55fe0-3708-42e7-ae36-f80721cdd6ae', '2026-05-28 15:50:19', '2026-05-28 17:50:19', NULL, NULL, NULL),
+(182, 2, '33bbff90-7a17-4d28-bc91-84e3fb3d1126', '2026-05-28 15:51:10', '2026-05-28 17:51:10', NULL, NULL, NULL),
+(183, 2, 'b580edff-dd22-4988-a6dd-9241371f7444', '2026-05-28 15:53:41', '2026-05-28 17:53:41', NULL, NULL, NULL),
+(184, 2, '4c3a7913-df0e-40c3-abf9-b36bea9fd49a', '2026-05-28 15:57:36', '2026-05-28 17:57:36', NULL, NULL, NULL),
+(185, 2, '6be6da7b-8a90-48d0-b1e5-49c818048fde', '2026-05-28 15:58:35', '2026-05-28 17:58:35', NULL, NULL, NULL),
+(186, 2, 'e5f16e88-94a0-46a4-b38c-498117851397', '2026-05-28 16:11:39', '2026-05-28 18:11:39', '2026-05-28 16:12:02', NULL, NULL),
+(187, 4, '9b37ae77-5f4a-4275-83b3-df136b67f082', '2026-05-28 16:12:06', '2026-05-28 18:12:06', '2026-05-28 16:12:11', NULL, NULL),
+(188, 2, 'af9d1f87-55b1-4214-9ba9-cfcb614ba941', '2026-05-28 16:53:52', '2026-05-28 18:53:52', NULL, NULL, NULL),
+(189, 2, 'd45d5b26-8b00-4e03-92d5-064f9f4ed8f9', '2026-05-29 16:11:23', '2026-05-29 18:11:23', NULL, NULL, NULL),
+(190, 2, 'a147cb67-88c8-4113-94eb-10683d3d434e', '2026-05-29 16:42:14', '2026-05-29 18:42:14', NULL, NULL, NULL),
+(191, 2, '136060d7-d4bf-42f2-b757-3e5ab4e4ad27', '2026-05-29 16:44:05', '2026-05-29 18:44:05', NULL, NULL, NULL),
+(192, 2, '4980839d-a68a-4925-9eaf-c8ab45e0237e', '2026-05-29 16:49:42', '2026-05-29 18:49:42', NULL, NULL, NULL),
+(193, 2, '7384ccb7-c926-4de5-9a1f-7e2db24f80e4', '2026-05-29 16:51:36', '2026-05-29 18:51:36', NULL, NULL, NULL),
+(194, 2, '592eb66c-1419-4f46-beb9-5985e345a5ae', '2026-05-29 16:55:49', '2026-05-29 18:55:49', NULL, NULL, NULL),
+(195, 2, '31dd5921-7324-4bcc-8d82-4e58ad6dc4bf', '2026-05-29 17:02:56', '2026-05-29 19:02:56', NULL, NULL, NULL),
+(196, 2, '3527bbfe-afee-49a6-aaa4-ea4a2e524b02', '2026-05-29 17:08:59', '2026-05-29 19:08:59', NULL, NULL, NULL),
+(197, 2, '8814f0d1-0e3c-460a-8960-3650e72f1a6e', '2026-05-29 17:10:18', '2026-05-29 19:10:18', NULL, NULL, NULL),
+(198, 2, '4b953c68-516d-4334-9ec1-39af9076d614', '2026-05-29 17:13:02', '2026-05-29 19:13:02', NULL, NULL, NULL),
+(199, 2, '8e10c082-c79e-4a22-ab47-340c6d6efe18', '2026-05-29 17:14:28', '2026-05-29 19:14:28', NULL, NULL, NULL),
+(200, 2, '18ffabb0-d7fb-4f76-921a-095cb0248fb7', '2026-05-29 17:16:35', '2026-05-29 19:16:35', NULL, NULL, NULL),
+(201, 2, '78cf76c7-d9a7-4169-8257-0b8042c5f48b', '2026-05-29 17:19:29', '2026-05-29 19:19:29', NULL, NULL, NULL),
+(202, 2, 'ef0c26d2-a9b6-47b5-b7d2-1226dccdb719', '2026-05-29 17:23:36', '2026-05-29 19:23:36', NULL, NULL, NULL),
+(203, 2, '748c7108-de37-4348-b28e-7ecc3d168378', '2026-05-29 17:30:29', '2026-05-29 19:30:29', NULL, NULL, NULL),
+(204, 2, '2e03a12a-4982-47d7-b4fa-3d39cb121152', '2026-05-29 21:38:49', '2026-05-29 23:38:49', '2026-05-29 21:39:05', NULL, NULL),
+(205, 4, 'dc147c92-d0f9-40d2-8ba8-7484da29204c', '2026-05-29 21:39:09', '2026-05-29 23:39:09', '2026-05-29 21:39:11', NULL, NULL),
+(206, 4, '8f177ac1-54b6-4d90-b81a-5d1f6058a385', '2026-05-29 22:27:54', '2026-05-30 00:27:54', '2026-05-29 22:27:57', NULL, NULL),
+(207, 2, '585553eb-9f36-4d8a-ae00-c3120937dfb9', '2026-05-29 22:28:01', '2026-05-30 00:28:01', '2026-05-29 22:28:05', NULL, NULL),
+(208, 2, 'dd5d2548-b085-48fb-bb90-fa6750145c9a', '2026-05-29 23:03:58', '2026-05-30 01:03:58', NULL, NULL, NULL),
+(209, 2, 'ce18c62e-2d5d-453d-b356-ac1354f5c701', '2026-05-29 23:04:10', '2026-05-30 01:04:10', NULL, NULL, NULL),
+(210, 2, 'd767b807-4c76-4a3b-bb8a-7f8482cfbd07', '2026-05-29 23:04:34', '2026-05-30 01:04:34', NULL, NULL, NULL),
+(211, 2, '65bdcf64-f58b-4984-a655-2e6c80e57c90', '2026-05-29 23:05:12', '2026-05-30 01:05:12', NULL, NULL, NULL),
+(212, 2, '8f34e336-4be3-4981-9a9c-967f9d188742', '2026-05-29 23:09:00', '2026-05-30 01:09:00', NULL, NULL, NULL),
+(213, 2, '24d62caf-a5a7-4d90-8d55-a16f91895c6d', '2026-05-29 23:11:16', '2026-05-30 01:11:16', NULL, NULL, NULL),
+(214, 2, '99c9490b-72f3-4596-a5be-d317c7f7b486', '2026-05-29 23:14:10', '2026-05-30 01:14:10', NULL, NULL, NULL),
+(215, 2, '725e1c6c-25db-4646-825f-519f9c414ff1', '2026-05-29 23:19:59', '2026-05-30 01:19:59', NULL, NULL, NULL),
+(216, 2, 'ca10651f-bd11-48c4-ac9b-d557bc110201', '2026-05-29 23:22:21', '2026-05-30 01:22:21', NULL, NULL, NULL),
+(217, 2, '85787bd0-beaf-495c-ba4c-d597b1138016', '2026-05-29 23:23:26', '2026-05-30 01:23:26', '2026-05-29 23:23:38', NULL, NULL),
+(218, 4, '134e3f47-c608-4633-8362-2559ae382b79', '2026-05-29 23:23:42', '2026-05-30 01:23:42', '2026-05-29 23:23:53', NULL, NULL),
+(219, 2, '13591126-0599-4459-bf4c-d76d9126d402', '2026-05-29 23:39:29', '2026-05-30 01:39:29', NULL, NULL, NULL),
+(220, 2, '86094146-f44c-48f1-adb7-599db2074f3c', '2026-05-29 23:42:00', '2026-05-30 01:42:00', NULL, NULL, NULL),
+(221, 2, '72528b78-8ccb-4d50-90e4-49a08285191f', '2026-05-29 23:45:37', '2026-05-30 01:45:37', NULL, NULL, NULL),
+(222, 2, '858cf40e-eda4-42fb-9cbd-0b24f1d66fb6', '2026-05-29 23:49:45', '2026-05-30 01:49:45', NULL, NULL, NULL),
+(223, 2, 'ad4272f2-fec6-4a6a-83f4-f9d101b09da5', '2026-05-31 10:25:53', '2026-05-31 12:25:53', NULL, NULL, NULL),
+(224, 2, '1433a31a-916d-4da5-922e-581fd00e90f2', '2026-05-31 10:31:56', '2026-05-31 12:31:56', NULL, NULL, NULL),
+(225, 2, '5c781079-8bee-46b3-a751-bd302972689f', '2026-05-31 10:36:49', '2026-05-31 12:36:49', '2026-05-31 10:38:23', NULL, NULL);
 
 INSERT INTO `RefillDetail` (`refilldetail_id`, `refilltask_id`, `machine_id`, `drink_id`, `planned_quantity`, `actual_quantity`, `refill_time`) VALUES
 (12, 10, 17, 1, NULL, 4, '2026-05-27 18:19:17'),
@@ -414,7 +498,8 @@ INSERT INTO `RefillTask` (`refilltask_id`, `team_id`, `region_id`, `task_date`, 
 (5, 1, 2, '2026-05-26', '定期補貨', '2026-05-26 22:42:48', 'Assigned', 3),
 (6, 1, 3, '2026-05-27', '檢查庫存', '2026-05-26 22:42:48', 'Assigned', 6),
 (10, 2, 1, '2026-05-27', 'Regular Refill', '2026-05-27 18:16:45', 'Completed', 17),
-(11, 2, 1, '2026-05-27', 'Regular Refill', '2026-05-27 18:29:50', 'Completed', 17);
+(11, 2, 1, '2026-05-27', 'Regular Refill', '2026-05-27 18:29:50', 'Completed', 17),
+(12, 2, 1, '2026-05-28', 'Regular Refill', '2026-05-28 15:28:02', 'Pending', 18);
 
 INSERT INTO `Region` (`region_id`, `region_name`, `description`, `manager_id`) VALUES
 (1, '大安區', NULL, NULL),
@@ -422,9 +507,13 @@ INSERT INTO `Region` (`region_id`, `region_name`, `description`, `manager_id`) V
 (3, '信義區', '台北東區', NULL),
 (4, '大同區', '台北北區', NULL);
 
+INSERT INTO `SalesRecord` (`sales_id`, `machine_id`, `drink_id`, `quantity`, `sale_time`, `record_source`) VALUES
+(1, 3, 1, 1, '2026-05-29 22:30:00', 'Auto');
+
 INSERT INTO `Staff` (`user_id`, `team_id`) VALUES
+(2, 1),
 (3, 1),
-(4, 2);
+(4, 3);
 
 INSERT INTO `Team` (`team_id`, `team_name`, `team_status`, `establish_time`, `region_id`) VALUES
 (1, 'A Team', 'Active', NULL, 2),
@@ -446,7 +535,11 @@ INSERT INTO `VendingMachine` (`machine_id`, `machine_name`, `machine_type`, `loc
 (15, 'z15', 'Smart', '傷學院ㄧ', NULL, NULL, 1),
 (16, 'z16', 'Smart', '發學院', NULL, NULL, 1),
 (17, 'z17', 'Smart', '傳院', NULL, NULL, 1),
-(18, 'TR-TEST-政大傳統機', 'Traditional', 'NCCU 綜合院館 1F', CURDATE(), '運行', 2);
+(18, 'z18', 'Smart', '傷學院', NULL, NULL, 1),
+(19, 'z19', 'Smart', '傷學院', NULL, NULL, 1),
+(20, 'z20', 'Smart', '大安站', NULL, NULL, 1),
+(21, 'z21', 'Smart', '信安和', NULL, NULL, 1),
+(22, 'z22', 'Smart', '信義安和', NULL, NULL, 3);
 
 
 
