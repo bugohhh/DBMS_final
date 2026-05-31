@@ -12,7 +12,7 @@ DBMS_final/
 │   │   ├── css/
 │   │   │   └── style.css             # 前端樣式
 │   │   └── js/
-│   │       ├── config.js             # API Base URL、Mock 設定
+│   │       ├── config.js             # API Base URL、Mock 設定a
 │   │       ├── api.js                # fetch 封裝、token 管理
 │   │       ├── auth.js               # 登入、註冊、登出、消費者模式
 │   │       ├── app.js                # 主畫面切換、Dashboard、帳號管理
